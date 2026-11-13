@@ -23,7 +23,7 @@
             --app-padding-top: 10px;
             --app-padding-bottom: 20px;
             --app-padding-horizontal: 20px;
-            --header-grid-gap: 7px;
+            --header-grid-gap: 0px;
             --cell-size: 80px;
             --grid-column-gap: 0px;
             --grid-row-gap: 0px;
@@ -41,8 +41,7 @@
 
         /* Cell dimming settings: 0 is invisible, 1 is fully visible. */
         :root {
-            --half-dim-opacity: 0.72;
-            --full-dim-opacity: 0.20; /* 48 */
+            --full-dim-opacity: 0.28;
         }
 
         body {
@@ -201,6 +200,21 @@
             box-shadow: none !important;
         }
 
+        .grid-cell.cell-status-triple .underline-svg {
+            animation: triple-urgent-blink 1s ease-in-out infinite;
+        }
+
+        @keyframes triple-urgent-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.15; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .grid-cell.cell-status-triple .underline-svg {
+                animation: none;
+            }
+        }
+
         #multi-cell-selection-box {
             position: relative;
             width: 100%;
@@ -251,15 +265,6 @@
             backdrop-filter: blur(2px);
         }
 
-        .grid-cell.cell-status-dashed .stone-wrapper,
-        .grid-cell.cell-status-dashed .cell-timer-dock,
-        .grid-cell.cell-status-dashed .cell-underline-dock,
-        .grid-cell.cell-status-wave .stone-wrapper,
-        .grid-cell.cell-status-wave .cell-timer-dock,
-        .grid-cell.cell-status-wave .cell-underline-dock {
-            opacity: var(--half-dim-opacity);
-        }
-
         .grid-cell.cell-status-sleep .stone-wrapper,
         .grid-cell.cell-status-sleep .cell-timer-dock,
         .grid-cell.cell-status-sleep .cell-underline-dock,
@@ -267,12 +272,6 @@
         .grid-cell.cell-status-checkmark .cell-timer-dock,
         .grid-cell.cell-status-checkmark .cell-underline-dock {
             opacity: var(--full-dim-opacity);
-        }
-
-        .grid-cell.weekday-adjacent .stone-wrapper,
-        .grid-cell.weekday-adjacent .cell-timer-dock,
-        .grid-cell.weekday-adjacent .cell-underline-dock {
-            opacity: var(--half-dim-opacity);
         }
 
         .grid-cell.weekday-dimmed .stone-wrapper,
@@ -2125,6 +2124,9 @@
     </div>
 
     <script>
+        // Settings
+        const TOMORROW_UNDIM_HOUR = 17; // From this hour (0-23), tomorrow's cells are no longer dimmed.
+
         // Icons - black on white
         const iconCheck = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-black pointer-events-none"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
         const iconEdit = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-black pointer-events-none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
@@ -2232,7 +2234,7 @@ function getUnderlineHtml(noteOrStatuses) {
                 paths += `<path d="M 5 8.5 Q 10.5 4.0, 16 8.5 T 27 8.5 T 38 8.5 T 49 8.5" fill="none" stroke="#4f46e5" stroke-width="2.3" stroke-linecap="round"/>`;
             }
 
-            // 8. Sleep (sky blue) - "Zzz" icon
+            // 8. Snooze (sky blue) - "Zzz" icon
             if (list.includes('sleep')) {
                 paths += `<g fill="none" stroke="#0ea5e9" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M 15 6.5 H 20.5 L 15 12 H 20.5"/><path d="M 25 6 H 29.5 L 25 10.5 H 29.5"/><path d="M 34 5.5 H 37.5 L 34 9 H 37.5"/></g>`;
             }
@@ -3649,6 +3651,7 @@ function getUnderlineHtml(noteOrStatuses) {
         const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
         function getNoteWeekday(note) {
+            if (note?.weekday === 'everyday') return 'everyday';
             return Number.isInteger(note?.weekday) && note.weekday >= 0 && note.weekday < 7 ? note.weekday : null;
         }
 
@@ -3656,14 +3659,15 @@ function getUnderlineHtml(noteOrStatuses) {
             const cell = document.getElementById(`grid-cell-${index}`);
             if (!cell || !notes[index]) return;
             const day = getNoteWeekday(notes[index]);
-            const distance = day === null ? 0 : (day - new Date().getDay() + 7) % 7;
-            cell.classList.toggle('weekday-adjacent', editingIndex !== index && distance === 1);
-            cell.classList.toggle('weekday-dimmed', editingIndex !== index && distance > 1);
+            const now = new Date();
+            const distance = typeof day === 'number' ? (day - now.getDay() + 7) % 7 : 0;
+            const visibleDistance = now.getHours() >= TOMORROW_UNDIM_HOUR ? 1 : 0;
+            cell.classList.toggle('weekday-dimmed', editingIndex !== index && distance > visibleDistance);
             const dock = cell.querySelector('.cell-timer-dock');
             if (dock) {
-                dock.classList.toggle('has-weekday', day !== null);
-                dock.querySelector('span').textContent = day === null ? '' : weekdayNames[day].slice(0, 3).toUpperCase();
-                dock.setAttribute('aria-label', day === null ? 'Set day of week' : `Day of week: ${weekdayNames[day]}`);
+                dock.classList.toggle('has-weekday', typeof day === 'number');
+                dock.querySelector('span').textContent = typeof day === 'number' ? weekdayNames[day].slice(0, 3).toUpperCase() : '';
+                dock.setAttribute('aria-label', day === null ? 'Set day of week' : `Day of week: ${day === 'everyday' ? 'Everyday' : weekdayNames[day]}`);
             }
         }
 
@@ -3686,15 +3690,16 @@ function getUnderlineHtml(noteOrStatuses) {
             const current = targets.length && targets.every(index => getNoteWeekday(notes[index]) === getNoteWeekday(notes[targets[0]]))
                 ? getNoteWeekday(notes[targets[0]]) : undefined;
             const today = new Date().getDay();
-            const options = Array.from({ length: 7 }, (_, offset) => (today + offset) % 7);
+            const options = ['everyday', ...Array.from({ length: 7 }, (_, offset) => (today + offset) % 7)];
             const item = (day, label) => {
                 const selected = current === day;
-                return `<button type="button" class="menu-option-item ${selected ? 'bg-blue-50/70 text-blue-700 font-bold' : 'text-gray-800'}" role="menuitemradio" aria-checked="${selected}" onclick="applyWeekdayToSelection(${noteIndex}, ${day === null ? 'null' : day})">
+                const value = day === 'everyday' ? "'everyday'" : day === null ? 'null' : day;
+                return `<button type="button" class="menu-option-item ${selected ? 'bg-blue-50/70 text-blue-700 font-bold' : 'text-gray-800'}" role="menuitemradio" aria-checked="${selected}" onclick="applyWeekdayToSelection(${noteIndex}, ${value})">
                     <span class="font-medium">${label}</span>
                     ${selected ? iconCheck : ''}
                 </button>`;
             };
-            contextMenu.innerHTML = `<div class="menu-option-container select-none" role="menu">${options.map(day => item(day, weekdayNames[day])).join('')}</div>`;
+            contextMenu.innerHTML = `<div class="menu-option-container select-none" role="menu">${options.map(day => item(day, day === 'everyday' ? 'Everyday' : weekdayNames[day])).join('')}</div>`;
             positionMenu(x, y, anchorElement, 'timer-right');
         }
 
@@ -3785,8 +3790,8 @@ function getUnderlineHtml(noteOrStatuses) {
                 { id: 'triple', name: 'Triple', color: '#ef4444', border: 'border-red-300' },
                 { id: 'dashed', name: 'Dashed', color: '#d946ef', border: 'border-fuchsia-300' },
                 { id: 'wave', name: 'Wave', color: '#4f46e5', border: 'border-indigo-300' },
-                { id: 'sleep', name: 'Sleep', color: '#0ea5e9', border: 'border-sky-300' },
-                { id: 'checkmark', name: 'Checkmark', color: '#22c55e', border: 'border-green-300' }
+                { id: 'sleep', name: 'Snooze', color: '#0ea5e9', border: 'border-sky-300' },
+                { id: 'checkmark', name: 'Checkmark', color: '#22c55e',                 border: 'border-green-300' }
             ];
             let html = `<div class="menu-option-container select-none">`;
             options.forEach(opt => {
