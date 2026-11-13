@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -10,10 +10,6 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- HTML to Image -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"
-        crossorigin="anonymous"></script>
-
     <style>
         /* Layout tuning: edit these values to adjust spacing and sizing. */
         :root {
@@ -22,12 +18,12 @@
             --grid-horizontal-inset: 0px;
             /* Extra space beyond window and app padding.
             It only changes the cell size when width is limiting the board; if height is already the limiting factor, it may have no visible effect. */
-            --grid-vertical-inset: 0px;
+            --grid-vertical-inset: 6px; 
             /* Extra space beyond window and app padding. */
             --app-padding-top: 10px;
             --app-padding-bottom: 20px;
             --app-padding-horizontal: 20px;
-            --header-grid-gap: 10px;
+            --header-grid-gap: 7px;
             --cell-size: 80px;
             --grid-column-gap: 0px;
             --grid-row-gap: 0px;
@@ -41,6 +37,12 @@
             --cell-height: var(--cell-size);
             --cell-padding-top: 0px;
             --plate-extra-h: 0px;
+        }
+
+        /* Cell dimming settings: 0 is invisible, 1 is fully visible. */
+        :root {
+            --half-dim-opacity: 0.72;
+            --full-dim-opacity: 0.20; /* 48 */
         }
 
         body {
@@ -249,11 +251,47 @@
             backdrop-filter: blur(2px);
         }
 
+        .grid-cell.cell-status-dashed .stone-wrapper,
+        .grid-cell.cell-status-dashed .cell-timer-dock,
+        .grid-cell.cell-status-dashed .cell-underline-dock,
+        .grid-cell.cell-status-wave .stone-wrapper,
+        .grid-cell.cell-status-wave .cell-timer-dock,
+        .grid-cell.cell-status-wave .cell-underline-dock {
+            opacity: var(--half-dim-opacity);
+        }
+
+        .grid-cell.cell-status-sleep .stone-wrapper,
+        .grid-cell.cell-status-sleep .cell-timer-dock,
+        .grid-cell.cell-status-sleep .cell-underline-dock,
+        .grid-cell.cell-status-checkmark .stone-wrapper,
+        .grid-cell.cell-status-checkmark .cell-timer-dock,
+        .grid-cell.cell-status-checkmark .cell-underline-dock {
+            opacity: var(--full-dim-opacity);
+        }
+
+        .grid-cell.weekday-adjacent .stone-wrapper,
+        .grid-cell.weekday-adjacent .cell-timer-dock,
+        .grid-cell.weekday-adjacent .cell-underline-dock {
+            opacity: var(--half-dim-opacity);
+        }
+
+        .grid-cell.weekday-dimmed .stone-wrapper,
+        .grid-cell.weekday-dimmed .cell-timer-dock,
+        .grid-cell.weekday-dimmed .cell-underline-dock {
+            opacity: var(--full-dim-opacity);
+        }
+
+        .grid-cell.is-selected .stone-wrapper,
+        .grid-cell.is-selected .cell-timer-dock,
+        .grid-cell.is-selected .cell-underline-dock {
+            opacity: 1;
+        }
+
         .cell-timer-dock {
             position: absolute;
             top: 0;
             left: 50%;
-            width: 56%;
+            width: 6ch;
             max-width: calc(100% - 8px);
             height: 18px;
             display: flex;
@@ -265,29 +303,29 @@
             box-sizing: border-box;
             border-radius: 9999px;
             transform: translateX(-50%);
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1;
-            color: #1e3a8a;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.82);
+            box-shadow: 0 1px 5px rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(2px);
+            font-weight: 500;
+            line-height: 12px;
+            padding: 0 2px;
+            color: #6b7280;
+            border: 0;
+        }
+
+        .cell-timer-dock:not(.has-weekday) {
+            background: none;
+            box-shadow: none;
+            backdrop-filter: none;
         }
 
         .cell-timer-dock * {
             pointer-events: none;
         }
 
-        .cell-timer-dock svg {
-            width: 12px;
-            height: 12px;
-            flex: none;
-        }
-
-        .cell-timer-dock:not(.is-snoozed) > * {
-            visibility: hidden;
-        }
-
-        .grid-cell .cell-timer-dock.is-snoozed {
-            background: #dbeafe;
-            box-shadow: 0 1px 5px rgba(96, 165, 250, 0.55);
+        .cell-timer-dock span {
+            transform: translateY(-1px);
         }
 
         .grid-cell.cell-status-normal .cell-underline-dock .underline-svg {
@@ -303,22 +341,6 @@
             /* Golden amber matching user sketch */
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
             transition: opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease;
-        }
-
-        /* Dim underline while editing text */
-        .grid-cell:has(#note-edit-input) .underline-svg,
-        .grid-cell:has([contenteditable="true"]) .underline-svg {
-            opacity: 0.35 !important;
-        }
-
-        /* Pause underline animation when note is filtered out unless selected or active. */
-        .note-filtered-out:not(.is-selected):not(.has-menu) .underline-svg {
-            animation: none !important;
-        }
-
-        .note-filtered-out.is-selected .underline-svg,
-        .note-filtered-out.has-menu .underline-svg {
-            opacity: 1 !important;
         }
 
         #context-menu {
@@ -340,8 +362,7 @@
         #context-menu.menu-thumbtack,
         #context-menu[data-menu-type="grid"],
         #context-menu[data-menu-type="colors"],
-        #context-menu[data-menu-type="style"],
-        #context-menu[data-menu-type="filter"] {
+        #context-menu[data-menu-type="style"] {
             opacity: 1 !important;
             background: #ffffff !important;
             background-color: #ffffff !important;
@@ -362,7 +383,8 @@
         }
 
         #context-menu[data-menu-type="status"],
-        #context-menu[data-menu-type="snooze"],
+        #context-menu[data-menu-type="sleep"],
+        #context-menu[data-menu-type="weekday"],
         #context-menu[data-menu-type="font"] {
             opacity: 1 !important;
             background: #ffffff !important;
@@ -372,7 +394,7 @@
         }
 
         .menu-font-container,
-        .menu-filter-container {
+        .menu-option-container {
             min-width: 175px;
             width: max-content;
             padding: 8px 0;
@@ -380,7 +402,7 @@
         }
 
         .menu-font-item,
-        .menu-filter-item {
+        .menu-option-item {
             padding: 7px 16px;
             display: flex;
             align-items: center;
@@ -393,8 +415,14 @@
         }
 
         .menu-font-item:hover,
-        .menu-filter-item:hover {
+        .menu-option-item:hover {
             background-color: rgba(239, 246, 255, 0.9);
+        }
+
+        button.menu-option-item {
+            width: 100%;
+            border: 0;
+            text-align: left;
         }
 
         .menu-font-container {
@@ -403,31 +431,6 @@
 
         .menu-font-item {
             gap: 10px;
-        }
-
-        .menu-timer-container {
-            width: max-content;
-            padding: 12px 16px;
-            box-sizing: border-box;
-        }
-
-        .timer-choice {
-            min-width: 0;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            background: #fff;
-            padding: 5px 8px;
-            color: #374151;
-            font-size: 12px;
-            line-height: 16px;
-            cursor: pointer;
-        }
-
-        .timer-choice[aria-pressed="true"] {
-            border-color: #3b82f6;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-weight: 600;
         }
 
         .menu-color-palette {
@@ -501,20 +504,6 @@
             outline-offset: 3px;
         }
 
-        .thumbtack.thumbtack-active {
-            background: radial-gradient(circle at 35% 30%, #3b82f6 0%, #1d4ed8 52%, #1e3a8a 100%);
-            border-color: rgba(147, 197, 253, 0.85);
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), inset 0 1px 3px rgba(255, 255, 255, 0.45);
-        }
-
-        .thumbtack.thumbtack-active svg {
-            color: #ffffff !important;
-        }
-
-        .thumbtack.thumbtack-active:hover {
-            background: radial-gradient(circle at 35% 30%, #60a5fa 0%, #2563eb 52%, #1d4ed8 100%);
-        }
-
         .thumbtack.trash-drop-target,
         .thumbtack.trash-drop-target:hover {
             transform: scale(1.25);
@@ -522,50 +511,6 @@
             background: radial-gradient(circle at 35% 30%, #f87171 0%, #dc2626 52%, #991b1b 100%);
             border-color: rgba(254, 202, 202, 0.9);
             box-shadow: 0 0 10px rgba(239, 68, 68, 0.75), inset 0 1px 3px rgba(255, 255, 255, 0.45);
-        }
-
-        .note-filtered-out .stone-wrapper {
-            opacity: 0.15;
-            filter: grayscale(85%);
-            transition: opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease;
-        }
-
-        .note-filtered-out.has-menu .stone-wrapper {
-            opacity: 1 !important;
-            filter: none !important;
-        }
-
-        .note-filtered-out .cell-timer-dock,
-        .note-filtered-out .cell-underline-dock {
-            opacity: 0.15;
-            filter: grayscale(85%);
-            transition: opacity 0.2s ease, filter 0.2s ease;
-        }
-
-        .note-filtered-out.has-menu .cell-timer-dock,
-        .note-filtered-out.has-menu .cell-underline-dock {
-            opacity: 1 !important;
-            filter: none !important;
-        }
-
-        .note-filtered-out:not(.is-selected):not(.has-menu) * {
-            animation: none !important;
-        }
-
-        .note-filtered-out.has-menu .stone-wrapper {
-            opacity: 1 !important;
-            filter: none !important;
-        }
-
-        .note-filtered-out.is-selected .stone-wrapper,
-        .note-filtered-out.is-selected .cell-timer-dock,
-        .note-filtered-out.is-selected .cell-underline-dock {
-            opacity: 0.65 !important;
-            filter: grayscale(35%) !important;
-        }
-
-        .note-filtered-out-empty .cell-add-icon {
-            opacity: 0.2 !important;
         }
 
         .thumbtack svg {
@@ -661,8 +606,7 @@
         body.is-marquee-selecting .grid-cell .stone-action-btn,
         body.is-marquee-selecting .grid-cell.is-selected .stone-action-btn,
         body.has-window-selection .grid-cell .stone-action-btn,
-        body.has-window-selection .grid-cell.is-selected .stone-action-btn,
-        .note-filtered-out:not(.has-menu):not(.is-selected) .stone-action-btn {
+        body.has-window-selection .grid-cell.is-selected .stone-action-btn {
             display: none !important;
             opacity: 0 !important;
             pointer-events: none !important;
@@ -677,7 +621,7 @@
             align-items: center;
             gap: clamp(8px, 2.2vw, 12px);
             width: 100%;
-            margin-bottom: var(--header-grid-gap);
+            margin-bottom: calc(var(--grid-row-gap) + var(--header-grid-gap));
         }
 
         .header-controls {
@@ -2094,13 +2038,6 @@
                 <circle cx="12" cy="12" r="4" />
             </svg>
         </div>
-        <div id="btn-filter" class="thumbtack" title="Filter Notes" role="button" tabindex="0"
-            aria-label="Filter notes">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-            </svg>
-        </div>
         <div id="btn-trash" class="thumbtack" title="Delete selected notes (or drop notes here)" role="button" tabindex="0"
             aria-label="Delete notes">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2119,15 +2056,6 @@
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 16v-4" />
                 <path d="M12 8h.01" />
-            </svg>
-        </div>
-
-        <div id="btn-camera" class="thumbtack" title="Snapshot">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z">
-                </path>
-                <circle cx="12" cy="13" r="3"></circle>
             </svg>
         </div>
 
@@ -2203,11 +2131,11 @@
         const iconPalette = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-black pointer-events-none"><circle cx="13.5" cy="6.5" r=".5" fill="#000000"></circle><circle cx="17.5" cy="10.5" r=".5" fill="#000000"></circle><circle cx="8.5" cy="7.5" r=".5" fill="#000000"></circle><circle cx="6.5" cy="12.5" r=".5" fill="#000000"></circle><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.53-.21-1.04-.59-1.41C13.54 17.72 13.38 17.2 13.53 16.66 13.82 15.65 14.81 15 15.92 15H17c2.76 0 5-2.76 5-5 0-4.42-4.48-8-10-8z"></path></svg>`;
         const iconFont = `<span class="font-serif font-bold text-sm pointer-events-none text-black" style="color: #000000;">Aa</span>`;
         // Status menu icon (flag)
-        const iconSnooze = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="2" x2="14" y2="2"></line><line x1="12" y1="14" x2="15" y2="11"></line><circle cx="12" cy="14" r="8"></circle></svg>`;
-        const iconStatus = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-black pointer-events-none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>`;
+        const iconStatus =  `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-black pointer-events-none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>`;
+        const iconWeekday = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>`;
 
-        const statusModes = ['single', 'double', 'triple', 'dashed', 'dotted', 'wave', 'checkmark'];
-        const statusClassNames = ['cell-status-single', 'cell-status-double', 'cell-status-triple', 'cell-status-zigzag', 'cell-status-dotted', 'cell-status-dashed', 'cell-status-wave', 'cell-status-checkmark', 'cell-status-urgent', 'cell-status-priority', 'cell-status-important', 'cell-status-attention', 'cell-status-hold', 'cell-status-waiting', 'cell-status-completed', 'cell-status-conundrum'];
+        const statusModes = ['single', 'double', 'triple', 'dashed', 'wave', 'checkmark', 'sleep'];
+                                        const statusClassNames = ['cell-status-sleep',      'cell-status-single', 'cell-status-double', 'cell-status-triple', 'cell-status-zigzag', 'cell-status-dotted', 'cell-status-dashed', 'cell-status-wave', 'cell-status-checkmark', 'cell-status-urgent', 'cell-status-priority', 'cell-status-important', 'cell-status-attention', 'cell-status-hold', 'cell-status-waiting', 'cell-status-completed', 'cell-status-conundrum'];
 
         function canonicalStatus(s) {
             if (!s || s === 'off' || s === 'none' || s === false) return null;
@@ -2215,10 +2143,10 @@
             if (str === 'single' || str === 'important') return 'single';
             if (str === 'double' || str === 'priority') return 'double';
             if (str === 'triple' || str === 'urgent') return 'triple';
-            if (str === 'zigzag' || str === 'dotted' || str === 'conundrum') return 'dotted';
             if (str === 'dashed' || str === 'hold' || str === 'waiting') return 'dashed';
             if (str === 'wave' || str === 'attention' || str === 'current') return 'wave';
             if (str === 'checkmark' || str === 'completed' || str === 'done' || str === 'linethrough') return 'checkmark';
+            if (str === 'sleep') return 'sleep';
             return statusModes.includes(str) ? str : null;
         }
 
@@ -2252,10 +2180,6 @@
             const activeStatuses = getNoteStatuses(notes[index]);
             cell.classList.remove(...statusClassNames, 'cell-status-normal');
             cell.classList.add(activeStatuses.length > 0 ? `cell-status-${activeStatuses[0]}` : 'cell-status-normal');
-            cell.classList.toggle(
-                'note-filtered-out',
-                editingIndex !== index && !isNoteMatchingFilter(notes[index])
-            );
         }
 
 function getUnderlineHtml(noteOrStatuses) {
@@ -2303,18 +2227,14 @@ function getUnderlineHtml(noteOrStatuses) {
                 paths += `<path d="M 5.5 8.5 L 11.5 8.5 M 18.5 8.5 L 24.5 8.5 M 31.5 8.5 L 37.5 8.5 M 44.5 8.5 L 50.5 8.5" stroke="#d946ef" stroke-width="2.8" stroke-linecap="round"/>`;
             }    
 
-            // 6. Dotted (indigo #4f46e5)
-            if (list.includes('dotted')) {
-                paths += `<circle cx="7" cy="8.5" r="1.6" fill="#4f46e5"/>
-                          <circle cx="17" cy="8.5" r="1.6" fill="#4f46e5"/>
-                          <circle cx="27" cy="8.5" r="1.6" fill="#4f46e5"/>
-                          <circle cx="37" cy="8.5" r="1.6" fill="#4f46e5"/>
-                          <circle cx="47" cy="8.5" r="1.6" fill="#4f46e5"/>`;
+            // 7. Wave (indigo #4f46e5)
+            if (list.includes('wave')) {
+                paths += `<path d="M 5 8.5 Q 10.5 4.0, 16 8.5 T 27 8.5 T 38 8.5 T 49 8.5" fill="none" stroke="#4f46e5" stroke-width="2.3" stroke-linecap="round"/>`;
             }
 
-            // 7. Wave (sky blue #0ea5e9)
-            if (list.includes('wave')) {
-                paths += `<path d="M 5 8.5 Q 10.5 4.0, 16 8.5 T 27 8.5 T 38 8.5 T 49 8.5" fill="none" stroke="#0ea5e9" stroke-width="2.3" stroke-linecap="round"/>`;
+            // 8. Sleep (sky blue) - "Zzz" icon
+            if (list.includes('sleep')) {
+                paths += `<g fill="none" stroke="#0ea5e9" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M 15 6.5 H 20.5 L 15 12 H 20.5"/><path d="M 25 6 H 29.5 L 25 10.5 H 29.5"/><path d="M 34 5.5 H 37.5 L 34 9 H 37.5"/></g>`;
             }
 
             return `<svg viewBox="0 0 54 18" width="54" height="18" class="underline-svg pointer-events-none" shape-rendering="geometricPrecision">${paths}</svg>`;
@@ -2354,7 +2274,6 @@ function getUnderlineHtml(noteOrStatuses) {
             'text-gray-800': '#1f2937'
         };
 
-        const iconTrashBin = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-black pointer-events-none"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
         // 12 Refined Neutral & Classic Colors for Note Board & Web Page
         const pageColors = [
             '#ffffff', // Pure White
@@ -2393,20 +2312,6 @@ function getUnderlineHtml(noteOrStatuses) {
         let workspaceColorIndex = 0; // Pure White (#ffffff)
         let cellStyle = 'game'; // 'game' | 'natural' | 'traffic'
         let titleState = { text: "Tiny Notes", colorIndex: 4, fontIndex: 4, isMenuOpen: false, isEditing: false };
-
-        const ALL_STATUS_FILTERS = [false, 'single', 'double', 'triple', 'dashed', 'dotted', 'wave', 'checkmark'];
-        const filterStatusSet = new Set(ALL_STATUS_FILTERS);
-
-        function isFilterActive() {
-            return filterStatusSet.size < ALL_STATUS_FILTERS.length;
-        }
-
-        function updateFilterButtonState() {
-            const btn = document.getElementById('btn-filter');
-            if (btn) {
-                btn.classList.toggle('thumbtack-active', isFilterActive());
-            }
-        }
 
         let selectedNotes = new Set();
         let lastUsedColor = colors[3]; // 'bg-green-500' (Green)
@@ -2457,10 +2362,20 @@ function getUnderlineHtml(noteOrStatuses) {
             clearActiveDropIndicator();
         }
 
+        function isPointInsideStone(circle, x, y) {
+            const rect = circle.getBoundingClientRect();
+            const radius = rect.width / 2;
+            const dx = x - rect.left - radius;
+            const dy = y - rect.top - radius;
+            return dx * dx + dy * dy <= radius * radius;
+        }
+
         function checkEditMouseDown(e) {
             if (editingIndex !== null) {
                 const cell = document.getElementById(`grid-cell-${editingIndex}`);
-                editMouseDownInside = !!(cell && cell.contains(e.target));
+                const circle = cell && cell.querySelector('.stone-effect');
+                editMouseDownInside = !!(circle && circle.contains(e.target) &&
+                    isPointInsideStone(circle, e.clientX, e.clientY));
             } else if (titleState.isEditing) {
                 editMouseDownInside = !!(titleContainer && titleContainer.contains(e.target));
             } else {
@@ -2482,8 +2397,6 @@ function getUnderlineHtml(noteOrStatuses) {
         let currentDropAnchor = null;
         let windowSelection = null;
 
-        let isCapturingScreenshot = false;
-
         const gridElement = document.getElementById('puzzle-grid');
         const titleContainer = document.getElementById('title-container');
         const contextMenu = document.getElementById('context-menu');
@@ -2499,7 +2412,6 @@ function getUnderlineHtml(noteOrStatuses) {
             document.getElementById('btn-grid'),
             document.getElementById('btn-colors'),
             document.getElementById('btn-note-style'),
-            document.getElementById('btn-filter'),
             document.getElementById('btn-trash')
         );
 
@@ -2507,7 +2419,6 @@ function getUnderlineHtml(noteOrStatuses) {
             document.getElementById('btn-load'),
             document.getElementById('btn-save'),
             document.getElementById('btn-sync'),
-            document.getElementById('btn-camera'),
             document.getElementById('btn-info')
         );
         headerRow.append(leftControls, titleContainer, rightControls);
@@ -2543,8 +2454,8 @@ function getUnderlineHtml(noteOrStatuses) {
             const appPadBottom = parseFloat(rootStyles.getPropertyValue('--app-padding-bottom')) || 10;
             const extraGridInsetX = parseFloat(rootStyles.getPropertyValue('--grid-horizontal-inset')) || 0;
             const extraGridInsetY = parseFloat(rootStyles.getPropertyValue('--grid-vertical-inset')) || 0;
-            const headerGap = parseFloat(rootStyles.getPropertyValue('--header-grid-gap')) || 4;
-            const headerHeight = headerRow.offsetHeight + headerGap;
+            const extraHeaderGap = parseFloat(rootStyles.getPropertyValue('--header-grid-gap')) || 0;
+            const headerHeight = headerRow.offsetHeight + rowGapSize + extraHeaderGap;
 
             const availW = window.innerWidth - 2 * windowPadX - 2 * appPadX - extraGridInsetX;
             const availH = viewportHeight - 2 * windowPadY - appPadTop - appPadBottom - extraGridInsetY - headerHeight;
@@ -2653,10 +2564,7 @@ function getUnderlineHtml(noteOrStatuses) {
                 titleColorVersion: rawData.titleColorVersion || null,
                 pageColorIndex: Number.isInteger(rawData.pageColorIndex) ? rawData.pageColorIndex : null,
                 workspaceColorIndex: Number.isInteger(rawData.appColorIndex) ? rawData.appColorIndex : null,
-                cellStyle: rawData.cellStyle || null,
-                filterSettings: Array.isArray(rawData.filterSettings)
-                    ? rawData.filterSettings.map(f => f === 'zigzag' ? 'dotted' : f).filter(f => ALL_STATUS_FILTERS.includes(f))
-                    : null
+                cellStyle: rawData.cellStyle || null
             };
         }
 
@@ -2696,15 +2604,6 @@ function getUnderlineHtml(noteOrStatuses) {
             if (data.pageColorIndex !== null && data.pageColorIndex >= 0 && data.pageColorIndex < pageColors.length) pageColorIndex = data.pageColorIndex;
             if (data.workspaceColorIndex !== null && data.workspaceColorIndex >= 0 && data.workspaceColorIndex < workspaceColors.length) workspaceColorIndex = data.workspaceColorIndex;
             if (data.cellStyle === 'game' || data.cellStyle === 'natural' || data.cellStyle === 'traffic') cellStyle = data.cellStyle;
-            if (Array.isArray(data.filterSettings)) {
-                filterStatusSet.clear();
-                data.filterSettings.forEach(f => {
-                    if (ALL_STATUS_FILTERS.includes(f)) filterStatusSet.add(f);
-                });
-            } else {
-                ALL_STATUS_FILTERS.forEach(f => filterStatusSet.add(f));
-            }
-            updateFilterButtonState();
             applyBackgroundColors();
             applyStyleSettings();
         }
@@ -2726,8 +2625,6 @@ function getUnderlineHtml(noteOrStatuses) {
 
             totalCols = 4; totalRows = 4;
             notes = Array(totalCols * totalRows).fill(null);
-            ALL_STATUS_FILTERS.forEach(f => filterStatusSet.add(f));
-            updateFilterButtonState();
             applyBackgroundColors();
             applyStyleSettings();
         }
@@ -2736,8 +2633,6 @@ function getUnderlineHtml(noteOrStatuses) {
             document.body.style.setProperty('--page-background', pageColors[pageColorIndex] || pageColors[0]);
             workspace.style.setProperty('--workspace-background', workspaceColors[workspaceColorIndex] || workspaceColors[0]);
         }
-
-        let snoozeExpiryTimeout = null;
 
         function getSaveObject() {
             return {
@@ -2752,8 +2647,7 @@ function getUnderlineHtml(noteOrStatuses) {
                 titleColorVersion: 2,
                 pageColorIndex,
                 appColorIndex: workspaceColorIndex,
-                cellStyle,
-                filterSettings: Array.from(filterStatusSet)
+                cellStyle
             };
         }
 
@@ -2814,7 +2708,6 @@ function getUnderlineHtml(noteOrStatuses) {
             editingIndex = null;
             activeMenuIndex = null;
             selectedNotes.clear();
-            resetNoteFilter();
             saveData(); resizeGrid(); renderTitle(); renderGrid();
             syncFileHandle = wasSyncing;
             syncDirty = false;
@@ -2962,11 +2855,11 @@ function getUnderlineHtml(noteOrStatuses) {
             if (rememberedSyncHandle) items.push({ label: `Resume with ${rememberedSyncHandle.name}`, action: resumeRememberedSync });
             if (window.showOpenFilePicker) items.push({ label: 'Choose existing file…', action: () => chooseSyncFile('existing') });
             if (window.showSaveFilePicker) items.push({ label: 'Create new file…', action: () => chooseSyncFile('new') });
-            contextMenu.innerHTML = `<div class="menu-filter-container select-none"></div>`;
+            contextMenu.innerHTML = `<div class="menu-option-container select-none"></div>`;
             const container = contextMenu.firstChild;
             items.forEach(({ label, action }) => {
                 const item = document.createElement('div');
-                item.className = 'menu-filter-item text-gray-800';
+                item.className = 'menu-option-item text-gray-800';
                 item.textContent = label;
                 item.addEventListener('click', () => { closeContextMenu(); action(); });
                 container.appendChild(item);
@@ -2998,7 +2891,6 @@ function getUnderlineHtml(noteOrStatuses) {
             } catch (e) { }
             if (syncPaused && !syncUnsaved) { syncUnsaved = true; updateSyncIndicator(); }
             scheduleSyncWrite();
-            scheduleSnoozeExpiry();
         }
 
 
@@ -3194,31 +3086,48 @@ function getUnderlineHtml(noteOrStatuses) {
             const stoneRect = getActiveMenuStoneRect(anchorElement);
 
             let posX, posY;
-            if (alignMode === 'timer') {
+            if (alignMode === 'timer-left' || alignMode === 'timer-right') {
                 const targetElement = selectedNotes.size > 1
                     ? document.getElementById('multi-cell-selection-box')
                     : document.getElementById(`grid-cell-${contextMenu.dataset.noteIndex}`);
                 const targetRect = targetElement?.getBoundingClientRect() || stoneRect;
                 if (!targetRect) return;
-                const spaceLeft = targetRect.left - margin;
-                const spaceRight = vpL + vpW - margin - targetRect.right;
-                const spaceBelow = vpT + vpH - margin - targetRect.bottom;
-                const spaceAbove = targetRect.top - (vpT + margin);
+                const avoidAnchor = anchorRect && (contextMenu.dataset.menuType === 'weekday' || contextMenu.dataset.menuType === 'status');
+                const leftEdge = Math.min(targetRect.left - 8, avoidAnchor ? anchorRect.left - 2 : Infinity);
+                const rightEdge = Math.max(targetRect.right + 8, avoidAnchor ? anchorRect.right + 2 : -Infinity);
+                const topEdge = Math.min(targetRect.top - 8, avoidAnchor ? anchorRect.top - 2 : Infinity);
+                const bottomEdge = Math.max(targetRect.bottom + 8, avoidAnchor ? anchorRect.bottom + 2 : -Infinity);
+                const spaceLeft = leftEdge - (vpL + margin);
+                const spaceRight = vpL + vpW - margin - rightEdge;
+                const spaceBelow = vpT + vpH - margin - bottomEdge;
+                const spaceAbove = topEdge - (vpT + margin);
 
                 if (spaceLeft >= rect.width || spaceRight >= rect.width) {
-                    posX = spaceLeft >= rect.width && (spaceLeft >= spaceRight || spaceRight < rect.width)
-                        ? targetRect.left - rect.width - 8
-                        : targetRect.right + 8;
+                    posX = spaceLeft >= rect.width && (alignMode === 'timer-left' || spaceRight < rect.width)
+                        ? leftEdge - rect.width
+                        : rightEdge;
                     posY = targetRect.top + (targetRect.height - rect.height) / 2;
                 } else if (spaceBelow >= rect.height || spaceAbove >= rect.height) {
                     posX = targetRect.left + (targetRect.width - rect.width) / 2;
                     posY = spaceBelow >= rect.height
-                        ? targetRect.bottom + 8
-                        : targetRect.top - rect.height - 8;
+                        ? bottomEdge
+                        : topEdge - rect.height;
+                } else if (avoidAnchor && anchorRect.right + 2 + rect.width <= vpL + vpW - margin) {
+                    posX = anchorRect.right + 2;
+                    posY = anchorRect.top + (anchorRect.height - rect.height) / 2;
+                } else if (avoidAnchor && anchorRect.left - 2 - rect.width >= vpL + margin) {
+                    posX = anchorRect.left - 2 - rect.width;
+                    posY = anchorRect.top + (anchorRect.height - rect.height) / 2;
+                } else if (avoidAnchor && anchorRect.bottom + 2 + rect.height <= vpT + vpH - margin) {
+                    posX = anchorRect.left + (anchorRect.width - rect.width) / 2;
+                    posY = anchorRect.bottom + 2;
+                } else if (avoidAnchor && anchorRect.top - 2 - rect.height >= vpT + margin) {
+                    posX = anchorRect.left + (anchorRect.width - rect.width) / 2;
+                    posY = anchorRect.top - 2 - rect.height;
                 } else {
                     posX = spaceLeft >= spaceRight
-                        ? targetRect.left - rect.width - 8
-                        : targetRect.right + 8;
+                        ? leftEdge - rect.width
+                        : rightEdge;
                     posY = targetRect.top + (targetRect.height - rect.height) / 2;
                 }
             } else if (stoneRect && (alignMode === 'left' || alignMode === 'right')) {
@@ -3355,7 +3264,6 @@ function getUnderlineHtml(noteOrStatuses) {
         }
 
         function closeContextMenu() {
-            if (commitSnoozeMenu() === null) return false;
             cancelMenuClose();
             if (activeMenuResizeObserver) {
                 activeMenuResizeObserver.disconnect();
@@ -3377,8 +3285,7 @@ function getUnderlineHtml(noteOrStatuses) {
             contextMenu.style.top = '0px';
             delete contextMenu.dataset.menuType;
             delete contextMenu.dataset.noteIndex;
-            delete contextMenu.dataset.snoozeTargets;
-            delete contextMenu.dataset.snoozeInitial;
+            delete contextMenu.dataset.dockMenu;
             document.querySelectorAll('.grid-cell.has-menu').forEach(c => c.classList.remove('has-menu'));
             if (activeMenuIndex !== null && !selectedNotes.has(activeMenuIndex) && editingIndex === null) {
                 activeMenuIndex = null;
@@ -3656,11 +3563,11 @@ function getUnderlineHtml(noteOrStatuses) {
                 }
             ];
 
-            let html = `<div class="menu-filter-container select-none" style="min-width: 170px;">`;
+            let html = `<div class="menu-option-container select-none" style="min-width: 170px;">`;
             styleOptions.forEach(opt => {
                 const isSelected = cellStyle === opt.id;
                 const selectedClass = isSelected ? 'bg-blue-50/70 text-blue-700 font-bold' : 'text-gray-800';
-                html += `<div class="menu-filter-item ${selectedClass}" onclick="setCellStyle('${opt.id}'); showNoteStyleMenu(null, null, document.getElementById('btn-note-style'));">
+                html += `<div class="menu-option-item ${selectedClass}" onclick="setCellStyle('${opt.id}'); showNoteStyleMenu(null, null, document.getElementById('btn-note-style'));">
                     <div class="flex items-center gap-2.5">
                         ${opt.icon}
                         <span class="font-medium">${opt.name}</span>
@@ -3680,82 +3587,6 @@ function getUnderlineHtml(noteOrStatuses) {
             return list.length > 0 ? list[0] : false;
         }
 
-        function isNoteMatchingFilter(note) {
-            if (!note) return false;
-            if (getNoteSnoozeUntil(note)) return false;
-            if (!isFilterActive()) return true;
-            const statuses = getNoteStatuses(note);
-            if (statuses.length === 0) {
-                return filterStatusSet.has(false);
-            }
-            return statuses.some(st => filterStatusSet.has(st));
-        }
-
-        window.resetNoteFilter = function () {
-            ALL_STATUS_FILTERS.forEach(b => filterStatusSet.add(b));
-            updateFilterButtonState();
-            saveData();
-            renderGrid();
-        };
-
-        window.toggleStatusFilter = function (val) {
-            if (filterStatusSet.has(val)) {
-                filterStatusSet.delete(val);
-            } else {
-                filterStatusSet.add(val);
-            }
-            updateFilterButtonState();
-            saveData();
-            renderGrid();
-        };
-
-        function showFilterMenu(x, y, anchorElement = null) {
-            activeHeaderMenu = 'filter';
-            contextMenu.dataset.menuType = 'filter';
-            contextMenu.classList.remove('menu-opacity-90', 'menu-cell');
-            contextMenu.classList.add('menu-thumbtack');
-            contextMenu.style.opacity = '1';
-            contextMenu.style.backgroundColor = '#ffffff';
-            const checkSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-            const crossSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 shrink-0"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-
-            let html = `<div class="menu-filter-container select-none">`;
-
-            const statusItems = [
-                { id: false, name: 'None', color: '#ffffff', dotBorder: 'border-gray-400' },
-                { id: 'single', name: 'Single', color: '#f59e0b', dotBorder: 'border-amber-300' },
-                { id: 'double', name: 'Double', color: '#f97316', dotBorder: 'border-orange-300' },
-                { id: 'triple', name: 'Triple', color: '#ef4444', dotBorder: 'border-red-300' },
-                { id: 'dashed', name: 'Dashed', color: '#d946ef', dotBorder: 'border-fuchsia-300' },
-                { id: 'dotted', name: 'Dotted', color: '#4f46e5', dotBorder: 'border-indigo-300' },
-                { id: 'wave', name: 'Wave', color: '#0ea5e9', dotBorder: 'border-sky-300' },
-                { id: 'checkmark', name: 'Checkmark', color: '#22c55e', dotBorder: 'border-green-300' }
-            ];
-
-            statusItems.forEach(item => {
-                const count = notes.filter(n => {
-                    if (!n) return false;
-                    const sts = getNoteStatuses(n);
-                    if (item.id === false) return sts.length === 0;
-                    return sts.includes(item.id);
-                }).length;
-                const isSelected = filterStatusSet.has(item.id);
-                const idArg = item.id === false ? 'false' : `'${item.id}'`;
-                html += `<div class="menu-filter-item text-gray-800" onclick="toggleStatusFilter(${idArg}); showFilterMenu(null, null, document.getElementById('btn-filter'));">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full shrink-0 border ${item.dotBorder || 'border-black/20'} shadow-sm" style="background-color: ${item.color};"></span>
-                        <span class="font-medium" style="${item.style || ''}">${item.name}</span>
-                        <span class="ml-0.5 font-normal text-gray-400 text-xs">(${count})</span>
-                    </div>
-                    ${isSelected ? checkSvg : crossSvg}
-                </div>`;
-            });
-
-            html += `</div>`;
-            contextMenu.innerHTML = html;
-            positionMenu(x, y, anchorElement);
-        }
-
         function isHeaderMenuOpen(menuType) {
             return !contextMenu.classList.contains('hidden') &&
                 (activeHeaderMenu === menuType || contextMenu.dataset.menuType === menuType);
@@ -3765,6 +3596,31 @@ function getUnderlineHtml(noteOrStatuses) {
             return !contextMenu.classList.contains('hidden') &&
                 contextMenu.dataset.menuType === menuType &&
                 contextMenu.dataset.noteIndex === String(noteIndex);
+        }
+
+        function toggleDockMenu(event, menuType, noteIndex) {
+            event.stopPropagation();
+            if (isContextMenuOpenFor(menuType, noteIndex) && contextMenu.dataset.dockMenu) {
+                closeContextMenu();
+                return;
+            }
+            const needsRender = editingIndex !== null || titleState.isEditing ||
+                selectedNotes.size > 0 || activeMenuIndex !== null || titleState.isMenuOpen;
+            closeContextMenu();
+            commitCurrentEdit();
+            selectedNotes.clear();
+            activeMenuIndex = null;
+            titleState.isMenuOpen = false;
+            if (needsRender) {
+                renderTitle();
+                renderGrid();
+            }
+            if (!notes[noteIndex]) return;
+            const dockClass = menuType === 'status' ? 'cell-underline-dock' : 'cell-timer-dock';
+            const dock = document.getElementById(`grid-cell-${noteIndex}`).querySelector(`.${dockClass}`);
+            contextMenu.dataset.dockMenu = 'true';
+            if (menuType === 'status') showStatusContextMenu(event.pageX, event.pageY, noteIndex, dock);
+            else showWeekdayContextMenu(event.pageX, event.pageY, noteIndex, dock);
         }
 
         function toggleFontContextMenu(x, y, noteIndex, anchorElement = null) {
@@ -3790,70 +3646,94 @@ function getUnderlineHtml(noteOrStatuses) {
             return indices.filter(index => notes[index]);
         }
 
-        function getNoteSnoozeUntil(note) {
-            const until = note && note.snoozeUntil;
-            return Number.isSafeInteger(until) && until > Date.now() ? until : 0;
+        const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        function getNoteWeekday(note) {
+            return Number.isInteger(note?.weekday) && note.weekday >= 0 && note.weekday < 7 ? note.weekday : null;
         }
 
-        // Day timers end at local midnight, so they land exactly on a 00:00 boundary
-        function isMidnight(ms) {
-            const d = new Date(ms);
-            return d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0 && d.getMilliseconds() === 0;
-        }
-
-        function getSnoozeDays(until) {
-            const startOfToday = new Date();
-            startOfToday.setHours(0, 0, 0, 0);
-            return Math.round((until - startOfToday.getTime()) / 86400000);
-        }
-
-        function getSnoozeEnd(duration, unit) {
-            if (unit === 'days') {
-                const end = new Date();
-                end.setHours(0, 0, 0, 0);
-                end.setDate(end.getDate() + duration);
-                return end.getTime();
-            }
-            return Date.now() + duration * 3600000;
-        }
-
-        function getSnoozeUnit(until) {
-            return until && isMidnight(until) ? 'days' : 'hours';
-        }
-
-        function formatSnoozeBadge(until) {
-            return getSnoozeUnit(until) === 'days'
-                ? `${getSnoozeDays(until)}d`
-                : `${Math.max(1, Math.ceil((until - Date.now()) / 3600000))}h`;
-        }
-
-        function getLastSnoozeUnit() {
-            return localStorage.getItem('tinyNotesSnoozeUnit') === 'days' ? 'days' : 'hours';
-        }
-
-        function updateSnoozeDock(dock, noteIndex) {
-            const until = getNoteSnoozeUntil(notes[noteIndex]);
-            dock.classList.toggle('is-snoozed', until > 0);
-            if (until) {
-                const badge = formatSnoozeBadge(until);
-                dock.innerHTML = `${iconSnooze}<span>${badge}</span>`;
-                const endDate = new Date(until);
-                const endDay = endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                const endTime = endDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                dock.title = `${endDay} ${endTime}`;
-            } else {
-                dock.innerHTML = iconSnooze;
-                dock.title = 'Dim timer';
+        function updateWeekdayDisplay(index) {
+            const cell = document.getElementById(`grid-cell-${index}`);
+            if (!cell || !notes[index]) return;
+            const day = getNoteWeekday(notes[index]);
+            const distance = day === null ? 0 : (day - new Date().getDay() + 7) % 7;
+            cell.classList.toggle('weekday-adjacent', editingIndex !== index && distance === 1);
+            cell.classList.toggle('weekday-dimmed', editingIndex !== index && distance > 1);
+            const dock = cell.querySelector('.cell-timer-dock');
+            if (dock) {
+                dock.classList.toggle('has-weekday', day !== null);
+                dock.querySelector('span').textContent = day === null ? '' : weekdayNames[day].slice(0, 3).toUpperCase();
+                dock.setAttribute('aria-label', day === null ? 'Set day of week' : `Day of week: ${weekdayNames[day]}`);
             }
         }
 
-        function refreshSnoozeDocks() {
-            document.querySelectorAll('.cell-timer-dock[data-note-index]').forEach(dock => {
-                updateSnoozeDock(dock, Number(dock.dataset.noteIndex));
+        function toggleWeekdayContextMenu(x, y, noteIndex, anchorElement) {
+            if (isContextMenuOpenFor('weekday', noteIndex)) {
+                closeContextMenu();
+            } else if (closeContextMenu()) {
+                activeMenuIndex = noteIndex;
+                document.getElementById(`grid-cell-${noteIndex}`)?.classList.add('has-menu');
+                showWeekdayContextMenu(x, y, noteIndex, anchorElement);
+            }
+        }
+
+        function showWeekdayContextMenu(x, y, noteIndex, anchorElement) {
+            contextMenu.dataset.menuType = 'weekday';
+            contextMenu.dataset.noteIndex = String(noteIndex);
+            contextMenu.classList.remove('menu-thumbtack', 'menu-opacity-90');
+            contextMenu.classList.add('menu-cell');
+            const targets = getSelectionTargets(noteIndex);
+            const current = targets.length && targets.every(index => getNoteWeekday(notes[index]) === getNoteWeekday(notes[targets[0]]))
+                ? getNoteWeekday(notes[targets[0]]) : undefined;
+            const today = new Date().getDay();
+            const options = Array.from({ length: 7 }, (_, offset) => (today + offset) % 7);
+            const item = (day, label) => {
+                const selected = current === day;
+                return `<button type="button" class="menu-option-item ${selected ? 'bg-blue-50/70 text-blue-700 font-bold' : 'text-gray-800'}" role="menuitemradio" aria-checked="${selected}" onclick="applyWeekdayToSelection(${noteIndex}, ${day === null ? 'null' : day})">
+                    <span class="font-medium">${label}</span>
+                    ${selected ? iconCheck : ''}
+                </button>`;
+            };
+            contextMenu.innerHTML = `<div class="menu-option-container select-none" role="menu">${options.map(day => item(day, weekdayNames[day])).join('')}</div>`;
+            positionMenu(x, y, anchorElement, 'timer-right');
+        }
+
+        window.applyWeekdayToSelection = function (noteIndex, day) {
+            const targets = getSelectionTargets(noteIndex);
+            const clear = day === null || targets.every(index => getNoteWeekday(notes[index]) === day);
+            targets.forEach(index => {
+                if (clear) delete notes[index].weekday;
+                else notes[index].weekday = day;
+                delete notes[index].number;
             });
+            saveData();
+            closeContextMenu();
+            if (editingIndex !== noteIndex) {
+                selectedNotes.clear();
+                activeMenuIndex = null;
+            }
+            document.body.classList.remove('has-window-selection');
+            renderTitle();
+            renderGrid();
+        };
+
+        let draggedStatusIndex = null;
+
+        function copyNoteStatus(from, to) {
+            if (from === to || !notes[from] || !notes[to]) return;
+            setNoteStatus(to, getNoteStatuses(notes[from])[0] || false);
+            saveData();
         }
 
-        const statusCycle = [false, 'single', 'double', 'triple', 'dashed', 'dotted', 'wave', 'checkmark'];
+        function swapNoteStatuses(a, b) {
+            if (a === b || !notes[a] || !notes[b]) return;
+            const sa = getNoteStatuses(notes[a])[0] || false;
+            const sb = getNoteStatuses(notes[b])[0] || false;
+            if (sa === sb) return;
+            setNoteStatus(a, sb);
+            setNoteStatus(b, sa);
+            saveData();
+        }
 
         function setNoteStatus(index, status) {
             const note = notes[index];
@@ -3864,29 +3744,6 @@ function getUnderlineHtml(noteOrStatuses) {
             delete note.strike;
             delete note.xMark;
             updateNoteStatusDisplay(index);
-        }
-
-        function cycleNoteStatus(noteIndex, direction = 1) {
-            if (!notes[noteIndex]) return;
-            const current = getNoteStatuses(notes[noteIndex])[0] || false;
-            const currentIndex = statusCycle.indexOf(current);
-            const nextIndex = (currentIndex + direction + statusCycle.length) % statusCycle.length;
-            const next = statusCycle[nextIndex];
-            getSelectionTargets(noteIndex).forEach(index => setNoteStatus(index, next));
-            saveData();
-        }
-
-        function deleteNote(index, currentText) {
-            closeContextMenu();
-            const text = (currentText ?? notes[index]?.text ?? '').trim();
-            const preview = text.length > 120 ? `${text.slice(0, 120)}…` : text;
-            if (!window.confirm(`Delete this note?\n\n${preview || '(empty note)'}`)) return;
-            notes[index] = null;
-            selectedNotes.clear();
-            activeMenuIndex = null;
-            editingIndex = null;
-            saveData();
-            renderGrid();
         }
 
         function toggleStatusContextMenu(x, y, noteIndex, anchorElement = null) {
@@ -3905,7 +3762,10 @@ function getUnderlineHtml(noteOrStatuses) {
             contextMenu.style.opacity = '1';
             contextMenu.style.backgroundColor = '#ffffff';
 
-            const current = getNoteStatuses(notes[noteIndex])[0] || false;
+            const targets = getSelectionTargets(noteIndex);
+            const firstStatus = getNoteStatuses(notes[targets[0]])[0] || false;
+            const current = targets.length && targets.every(index => (getNoteStatuses(notes[index])[0] || false) === firstStatus)
+                ? firstStatus : undefined;
             // ==============================================================
             // STATUS COLORS & BORDERS
             // ==============================================================
@@ -3917,23 +3777,22 @@ function getUnderlineHtml(noteOrStatuses) {
             // Blue:     #0ea5e9  |  border-sky-300
             // Brown:    #8b4513  |  border-amber-900
             // Green:    #22c55e  |  border-green-300
-            // White:    #ffffff  |  border-gray-400 (Used for "None")
+            // White:    #ffffff  |  border-gray-400 (Used for "Normal")
             // ==============================================================
             const options = [
-                { id: false, name: 'None', color: '#ffffff', border: 'border-gray-400' },
                 { id: 'single', name: 'Single', color: '#f59e0b', border: 'border-amber-300' },
                 { id: 'double', name: 'Double', color: '#f97316', border: 'border-orange-300' },
                 { id: 'triple', name: 'Triple', color: '#ef4444', border: 'border-red-300' },
                 { id: 'dashed', name: 'Dashed', color: '#d946ef', border: 'border-fuchsia-300' },
-                { id: 'dotted', name: 'Dotted', color: '#4f46e5', border: 'border-indigo-300' },
-                { id: 'wave', name: 'Wave', color: '#0ea5e9', border: 'border-sky-300' },
+                { id: 'wave', name: 'Wave', color: '#4f46e5', border: 'border-indigo-300' },
+                { id: 'sleep', name: 'Sleep', color: '#0ea5e9', border: 'border-sky-300' },
                 { id: 'checkmark', name: 'Checkmark', color: '#22c55e', border: 'border-green-300' }
             ];
-            let html = `<div class="menu-filter-container select-none">`;
+            let html = `<div class="menu-option-container select-none">`;
             options.forEach(opt => {
                 const isSelected = opt.id === current;
                 const selectedClass = isSelected ? 'bg-blue-50/70 text-blue-700 font-bold' : 'text-gray-800';
-                html += `<div class="menu-filter-item ${selectedClass}" onclick="applyStatusToSelection(${noteIndex}, ${opt.id ? `'${opt.id}'` : 'false'})">
+                html += `<div class="menu-option-item ${selectedClass}" onclick="applyStatusToSelection(${noteIndex}, ${opt.id ? `'${opt.id}'` : 'false'})">
                     <div class="flex items-center gap-2.5">
                         <span class="w-3 h-3 rounded-full shrink-0 border ${opt.border} shadow-sm" style="background-color: ${opt.color};"></span>
                         <span class="font-medium">${opt.name}</span>
@@ -3943,129 +3802,23 @@ function getUnderlineHtml(noteOrStatuses) {
             });
             html += `</div>`;
             contextMenu.innerHTML = html;
-            positionMenu(x, y, anchorElement, getCellMenuAlign(anchorElement));
+            positionMenu(x, y, anchorElement, 'timer-right');
         }
 
         window.applyStatusToSelection = function (noteIndex, status) {
-            getSelectionTargets(noteIndex).forEach(index => setNoteStatus(index, status));
+            const targets = getSelectionTargets(noteIndex);
+            const clear = !status || targets.every(index => getNoteStatuses(notes[index])[0] === status);
+            targets.forEach(index => setNoteStatus(index, clear ? false : status));
             saveData();
             closeContextMenu();
+            if (editingIndex !== noteIndex) {
+                selectedNotes.clear();
+                activeMenuIndex = null;
+            }
+            document.body.classList.remove('has-window-selection');
+            renderTitle();
+            renderGrid();
         };
-
-        function toggleSnoozeContextMenu(x, y, noteIndex, anchorElement = null) {
-            if (isContextMenuOpenFor('snooze', noteIndex)) {
-                closeContextMenu();
-            } else if (closeContextMenu()) {
-                showSnoozeContextMenu(x, y, noteIndex, anchorElement);
-            }
-        }
-
-        function showSnoozeContextMenu(x, y, noteIndex, anchorElement = null) {
-            contextMenu.dataset.menuType = 'snooze';
-            contextMenu.dataset.noteIndex = String(noteIndex);
-            contextMenu.classList.remove('menu-thumbtack');
-            contextMenu.classList.add('menu-cell');
-            contextMenu.style.opacity = '1';
-            contextMenu.style.backgroundColor = '#ffffff';
-
-            const targets = getSelectionTargets(noteIndex);
-            contextMenu.dataset.snoozeTargets = JSON.stringify(targets);
-            const until = getNoteSnoozeUntil(notes[targets[0]]);
-            const unit = until ? getSnoozeUnit(until) : getLastSnoozeUnit();
-            const duration = !until ? 0 : unit === 'days'
-                ? getSnoozeDays(until)
-                : Math.max(1, Math.ceil((until - Date.now()) / 3600000));
-            contextMenu.dataset.snoozeInitial = `${duration}|${unit}`;
-
-            contextMenu.innerHTML = `<form id="snooze-form" class="menu-timer-container flex items-center gap-1.5 text-gray-800">
-                <span class="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-gray-600">${iconSnooze}Dim for</span>
-                <input id="snooze-duration" type="number" min="0" step="1" value="${duration}" aria-label="Duration"
-                    class="h-8 w-14 rounded border border-gray-300 bg-white px-1.5 text-sm">
-                <button type="button" class="timer-choice" data-snooze-unit="hours" aria-pressed="${unit === 'hours'}">Hour(s)</button>
-                <button type="button" class="timer-choice" data-snooze-unit="days" aria-pressed="${unit === 'days'}">Day(s)</button>
-            </form>`;
-            positionMenu(x, y, anchorElement, getCellMenuAlign(anchorElement));
-
-            const form = document.getElementById('snooze-form');
-            form.querySelectorAll('[data-snooze-unit]').forEach(button => {
-                button.addEventListener('click', () => {
-                    form.querySelectorAll('[data-snooze-unit]').forEach(other => {
-                        other.setAttribute('aria-pressed', String(other === button));
-                    });
-                });
-            });
-            form.addEventListener('submit', (event) => {
-                event.preventDefault();
-                closeContextMenu();
-            });
-        }
-
-        // Returns null for invalid input (keeps the menu open), false when nothing was changed
-        function commitSnoozeMenu() {
-            if (contextMenu.dataset.menuType !== 'snooze') return false;
-            const input = document.getElementById('snooze-duration');
-            if (!input) return false;
-            const duration = input.valueAsNumber;
-            if (!Number.isSafeInteger(duration) || duration < 0) {
-                input.setCustomValidity('Enter a whole number that is zero or greater.');
-                input.reportValidity();
-                return null;
-            }
-            input.setCustomValidity('');
-
-            const unit = contextMenu.querySelector('[data-snooze-unit][aria-pressed="true"]')?.dataset.snoozeUnit || 'hours';
-            if (`${duration}|${unit}` === contextMenu.dataset.snoozeInitial) return false;
-
-            const until = getSnoozeEnd(duration, unit);
-            if (!Number.isSafeInteger(until) || until > 8640000000000000) {
-                input.setCustomValidity('The selected duration is too large.');
-                input.reportValidity();
-                return null;
-            }
-            if (duration > 0) localStorage.setItem('tinyNotesSnoozeUnit', unit);
-            JSON.parse(contextMenu.dataset.snoozeTargets || '[]').filter(index => notes[index]).forEach(index => {
-                if (duration > 0) notes[index].snoozeUntil = until;
-                else delete notes[index].snoozeUntil;
-                updateNoteStatusDisplay(index);
-            });
-            saveData();
-            refreshSnoozeDocks();
-            return true;
-        }
-
-        function processExpiredSnoozes() {
-            let changed = false;
-            notes.forEach(note => {
-                if (note && note.snoozeUntil && !getNoteSnoozeUntil(note)) {
-                    delete note.snoozeUntil;
-                    changed = true;
-                }
-            });
-            if (changed) {
-                saveData();
-                renderGrid();
-            }
-        }
-
-        function scheduleSnoozeExpiry() {
-            if (snoozeExpiryTimeout !== null) {
-                clearTimeout(snoozeExpiryTimeout);
-                snoozeExpiryTimeout = null;
-            }
-            let nextDueAt = Infinity;
-            notes.forEach(note => {
-                const until = getNoteSnoozeUntil(note);
-                if (until && until < nextDueAt) nextDueAt = until;
-            });
-            if (Number.isFinite(nextDueAt)) {
-                const delay = Math.max(0, Math.min(nextDueAt - Date.now(), 2147483647));
-                snoozeExpiryTimeout = setTimeout(() => {
-                    snoozeExpiryTimeout = null;
-                    processExpiredSnoozes();
-                    scheduleSnoozeExpiry();
-                }, delay);
-            }
-        }
 
         // Prefer the side of the stone where the clicked icon sits (left or right)
         function getPreferredMenuSide(anchorElement) {
@@ -4074,11 +3827,6 @@ function getUnderlineHtml(noteOrStatuses) {
             if (!stoneRect || !anchorRect) return 'right';
             const anchorCenter = anchorRect.left + anchorRect.width / 2;
             return anchorCenter < stoneRect.left + stoneRect.width / 2 ? 'left' : 'right';
-        }
-
-        // Group toolbar menus open beside the selection on the clicked icon's side
-        function getCellMenuAlign(anchorElement) {
-            return anchorElement?.closest?.('#group-action-toolbar') ? getPreferredMenuSide(anchorElement) : 'timer';
         }
 
         function showColorContextMenu(x, y, noteIndex, anchorElement = null) {
@@ -4156,7 +3904,7 @@ function getUnderlineHtml(noteOrStatuses) {
             });
 
             html += `</div>`;
-            contextMenu.innerHTML = html;             positionMenu(x, y, anchorElement, isTitle ? 'default' : getPreferredMenuSide(anchorElement));
+            contextMenu.innerHTML = html;             positionMenu(x, y, anchorElement, isTitle ? 'default' : 'timer-left');
         }
 
         function commitCurrentEdit() {
@@ -4184,6 +3932,24 @@ function getUnderlineHtml(noteOrStatuses) {
             }
             if (committed) saveData();
             return committed;
+        }
+
+        function commitOutsideEdit() {
+            const noteIndex = editingIndex;
+            const committed = commitCurrentEdit();
+            if (noteIndex !== null && notes[noteIndex]) {
+                selectedNotes.clear();
+                selectedNotes.add(noteIndex);
+                activeMenuIndex = noteIndex;
+            }
+            return committed;
+        }
+
+        function commitOutsideEditAndRender() {
+            if (commitOutsideEdit()) {
+                renderTitle();
+                renderGrid();
+            }
         }
 
         function createMenuButton(positionClasses, iconHTML, onClick, tooltip = '') {
@@ -4266,7 +4032,7 @@ function getUnderlineHtml(noteOrStatuses) {
                     titleState.isMenuOpen = !titleState.isMenuOpen; renderTitle();
                 });
 
-                if (titleState.isMenuOpen && !isCapturingScreenshot) {
+                if (titleState.isMenuOpen) {
                     // Font size button on the left
                     const fontBtn = createTitleButton(iconFont, 'Title font size', (e) => {
                         toggleFontContextMenu(e.pageX, e.pageY, 'title', e.currentTarget);
@@ -4288,7 +4054,7 @@ function getUnderlineHtml(noteOrStatuses) {
                     titleContainer.appendChild(textEl);
                 }
             }
-            const computedColor = getComputedStyle(textEl).color;
+            const computedColor = titleColorValues[titleColors[titleState.colorIndex]] || getComputedStyle(textEl).color;
             document.documentElement.style.setProperty('--title-color', computedColor);
             document.documentElement.style.setProperty('--selection-ring-color', computedColor);
             resizeGrid();
@@ -4361,7 +4127,7 @@ function getUnderlineHtml(noteOrStatuses) {
             if (!gridElement) return;
             const existing = document.getElementById('multi-cell-selection-box');
             const existingToolbar = document.getElementById('group-action-toolbar');
-            if (isCapturingScreenshot || selectedNotes.size <= 1) {
+            if (selectedNotes.size <= 1) {
                 if (existing) existing.remove();
                 if (existingToolbar) existingToolbar.remove();
                 document.body.classList.remove('has-window-selection');
@@ -4416,26 +4182,26 @@ function getUnderlineHtml(noteOrStatuses) {
             });
             toolbar.appendChild(colorBtn);
 
-            // 2. Timer button: on bottom-left of the selection
-            const timerBtn = document.createElement('div');
-            timerBtn.className = btnBase;
-            timerBtn.setAttribute('style', `${btnStyle}position:absolute;top:-14px;right:-14px;`);
-            timerBtn.title = 'Set status';
-            timerBtn.innerHTML = iconStatus;
-            timerBtn.addEventListener('click', (e) => {
+            // 2. Status button: bottom-right of the selection
+            const statusBtn = document.createElement('div');
+            statusBtn.className = btnBase;
+            statusBtn.setAttribute('style', `${btnStyle}position:absolute;bottom:-14px;right:-14px;`);
+            statusBtn.title = 'Set status';
+            statusBtn.innerHTML = iconStatus;
+            statusBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 activeMenuIndex = anchorIdx;
                 document.querySelectorAll('.grid-cell.has-menu').forEach(c => c.classList.remove('has-menu'));
                 const cell = document.getElementById(`grid-cell-${anchorIdx}`);
                 if (cell) cell.classList.add('has-menu');
-                toggleStatusContextMenu(e.pageX, e.pageY, anchorIdx, timerBtn);
+                toggleStatusContextMenu(e.pageX, e.pageY, anchorIdx, statusBtn);
             });
-            toolbar.appendChild(timerBtn);
+            toolbar.appendChild(statusBtn);
 
-            // 3. Font button: on bottom-right of the selection
+            // 3. Font button: top-left of the selection
             const fontBtn = document.createElement('div');
             fontBtn.className = btnBase;
-            fontBtn.setAttribute('style', `${btnStyle}position:absolute;bottom:-14px;right:-14px;`);
+            fontBtn.setAttribute('style', `${btnStyle}            position:absolute;top:-14px;left:-14px;`);
             fontBtn.title = 'Change font size';
             fontBtn.innerHTML = iconFont;
             fontBtn.addEventListener('click', (e) => {
@@ -4448,21 +4214,20 @@ function getUnderlineHtml(noteOrStatuses) {
             });
             toolbar.appendChild(fontBtn);
 
-            // 4. Dim timer button: on top-right of the selection
-            const statusBtn2 = document.createElement('div');
-            statusBtn2.className = btnBase;
-            statusBtn2.setAttribute('style', `${btnStyle}position:absolute;top:-14px;left:-14px;`);
-            statusBtn2.title = 'Dim timer';
-            statusBtn2.innerHTML = iconSnooze;
-            statusBtn2.addEventListener('click', (e) => {
-                e.stopPropagation();
-                activeMenuIndex = anchorIdx;
-                document.querySelectorAll('.grid-cell.has-menu').forEach(c => c.classList.remove('has-menu'));
-                const cell = document.getElementById(`grid-cell-${anchorIdx}`);
-                if (cell) cell.classList.add('has-menu');
-                toggleSnoozeContextMenu(e.pageX, e.pageY, anchorIdx, statusBtn2);
-            });
-            toolbar.appendChild(statusBtn2);
+            if (notes[anchorIdx]) {
+                const weekdayBtn = document.createElement('button');
+                weekdayBtn.type = 'button';
+                weekdayBtn.className = btnBase;
+                weekdayBtn.setAttribute('style', `${btnStyle}position:absolute;top:-14px;right:-14px;`);
+                weekdayBtn.title = 'Set day of week';
+                weekdayBtn.setAttribute('aria-label', 'Set day of week for selection');
+                weekdayBtn.innerHTML = iconWeekday;
+                weekdayBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleWeekdayContextMenu(e.pageX, e.pageY, anchorIdx, weekdayBtn);
+                });
+                toolbar.appendChild(weekdayBtn);
+            }
 
             gridElement.appendChild(toolbar);
         }
@@ -4581,7 +4346,7 @@ function getUnderlineHtml(noteOrStatuses) {
 
         function setupWindowSelection() {
             document.addEventListener('pointerdown', (event) => {
-                if (event.button !== 0 || isCapturingScreenshot || editingIndex !== null || titleState.isEditing) return;
+                if (event.button !== 0 || editingIndex !== null || titleState.isEditing) return;
                 if (event.target.closest('.app-header, #context-menu, #about-modal, .title-menu-button, .thumbtack, button, input, textarea, [contenteditable="true"], .btn-save, .cell-underline-dock, .cell-timer-dock')) return;
 
                 const cell = event.target.closest('.grid-cell');
@@ -4593,12 +4358,7 @@ function getUnderlineHtml(noteOrStatuses) {
 
                     const circle = cell.querySelector('.stone-effect');
                     if (circle) {
-                        const r = circle.getBoundingClientRect();
-                        const radius = r.width / 2;
-                        const cx = r.left + radius;
-                        const cy = r.top + radius;
-                        const distSq = (event.clientX - cx) ** 2 + (event.clientY - cy) ** 2;
-                        if (distSq <= radius ** 2) {
+                        if (isPointInsideStone(circle, event.clientX, event.clientY)) {
                             return; // Only clicks strictly inside the stone circle belong to stone interactions
                         }
                     } else if (notes[cellIdx] === null) {
@@ -4892,7 +4652,7 @@ function getUnderlineHtml(noteOrStatuses) {
         }
 
         function initiateShapeDrag(e, i, r, c) {
-            if (commitCurrentEdit() || isCapturingScreenshot) { e.preventDefault(); return; }
+            if (commitCurrentEdit()) { e.preventDefault(); return; }
 
             document.documentElement.classList.add('is-dragging-stone');
             document.body.classList.add('is-dragging-stone');
@@ -4988,7 +4748,7 @@ function getUnderlineHtml(noteOrStatuses) {
                 const normalizedY = (e.clientY - circleRect.top - circleRect.height / 2) / (circleRect.height / 2);
                 if (normalizedX ** 2 + normalizedY ** 2 > 1) { e.preventDefault(); return; }
 
-                if (commitCurrentEdit() || isCapturingScreenshot) { e.preventDefault(); return; }
+                if (commitCurrentEdit()) { e.preventDefault(); return; }
 
                 document.documentElement.classList.add('is-dragging-stone');
                 document.body.classList.add('is-dragging-stone');
@@ -5081,45 +4841,42 @@ function getUnderlineHtml(noteOrStatuses) {
 
                     if (note === null) {
                         cell.classList.add('cell-status-normal');
-                        if (isFilterActive()) {
-                            cell.classList.add('note-filtered-out-empty');
+                        const isEmptySelected = selectedNotes.has(i);
+                        if (isEmptySelected) {
+                            cell.style.zIndex = '50';
+                            cell.classList.add('is-selected');
                         }
-                        if (!isCapturingScreenshot) {
-                            const isEmptySelected = selectedNotes.has(i);
 
-                            if (isEmptySelected) {
-                                cell.style.zIndex = '50';
-                                cell.classList.add('is-selected');
+                        cell.insertAdjacentHTML('beforeend', `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="cell-add-icon text-gray-400 opacity-50 select-none absolute" draggable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`);
+
+                        cell.addEventListener('click', (e) => {
+                            if (Date.now() <= suppressedMarqueeClickUntil) return;
+                            if (editMouseDownInside) return;
+                            e.stopPropagation();
+                            const wasEditingNote = editingIndex !== null;
+                            commitOutsideEdit();
+                            const clickedAddIcon = e.target.closest('.cell-add-icon');
+                            if (!clickedAddIcon && wasEditingNote) {
+                                renderTitle();
+                                renderGrid();
+                                return;
                             }
-
-                            cell.insertAdjacentHTML('beforeend', `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="cell-add-icon text-gray-400 opacity-50 select-none absolute" draggable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`);
-
-                            cell.addEventListener('click', (e) => {
-                                if (Date.now() <= suppressedMarqueeClickUntil) return;
-                                if (editMouseDownInside) return;
-                                e.stopPropagation(); commitCurrentEdit();
-                                const clickedAddIcon = e.target.closest('.cell-add-icon');
-                                if (!clickedAddIcon && selectedNotes.size > 0) {
-                                    selectedNotes.clear();
-                                    activeMenuIndex = null;
-                                    document.body.classList.remove('has-window-selection');
-                                    renderGrid();
-                                    return;
-                                }
-                                if (!clickedAddIcon) return;
-                                activeMenuIndex = null;
+                            if (!clickedAddIcon && selectedNotes.size > 0) {
                                 selectedNotes.clear();
-                                notes[i] = { text: '', color: lastUsedColor, fontIndex: lastUsedFontIndex };
-                                editingIndex = i; renderTitle(); renderGrid();
-                            });
-                        }
+                                activeMenuIndex = null;
+                                document.body.classList.remove('has-window-selection');
+                                renderGrid();
+                                return;
+                            }
+                            if (!clickedAddIcon) return;
+                            activeMenuIndex = null;
+                            selectedNotes.clear();
+                            notes[i] = { text: '', color: lastUsedColor, fontIndex: lastUsedFontIndex };
+                            editingIndex = i; renderTitle(); renderGrid();
+                        });
                     } else {
                         const statusGroup = getNoteStatusGroup(note);
                         cell.classList.add(statusGroup ? `cell-status-${statusGroup}` : 'cell-status-normal');
-                        const isMatch = isNoteMatchingFilter(note);
-                        if (!isMatch && editingIndex !== i) {
-                            cell.classList.add('note-filtered-out');
-                        }
                         const isSelectedCell = selectedNotes.has(i) || editingIndex === i;
                         if (isSelectedCell) {
                             cell.style.zIndex = '50';
@@ -5128,7 +4885,8 @@ function getUnderlineHtml(noteOrStatuses) {
                         if (activeMenuIndex === i && selectedNotes.size === 1) {
                             cell.style.zIndex = '50';
                         }
-                        const isMenuOpenForCell = !contextMenu.classList.contains('hidden') && contextMenu.dataset.noteIndex === String(i);
+                        const isMenuOpenForCell = !contextMenu.classList.contains('hidden') &&
+                            !contextMenu.dataset.dockMenu && contextMenu.dataset.noteIndex === String(i);
                         if (isMenuOpenForCell) {
                             cell.classList.add('has-menu');
                             cell.style.zIndex = '55';
@@ -5138,36 +4896,21 @@ function getUnderlineHtml(noteOrStatuses) {
 
                         cell.addEventListener('click', (e) => {
                             if (Date.now() <= suppressedMarqueeClickUntil) return;
-                            if (editingIndex === i || isCapturingScreenshot) return;
                             if (editMouseDownInside) return;
+                            if (editingIndex === i) {
+                                e.stopPropagation();
+                                commitOutsideEditAndRender();
+                                return;
+                            }
                             e.stopPropagation();
+                            const startEditing = selectedNotes.size === 1 && selectedNotes.has(i);
                             closeContextMenu();
                             commitCurrentEdit();
-
-                            if (selectedNotes.size > 1) {
-                                // When a window selection is selected, clicking on a cell deselects them all, selecting that one instead
-                                selectedNotes.clear();
-                                selectedNotes.add(i);
-                                activeMenuIndex = i;
-                                document.body.classList.remove('has-window-selection');
-                                renderTitle();
-                                renderGrid();
-                                return;
-                            }
-
-                            if (selectedNotes.size === 1 && selectedNotes.has(i)) {
-                                // Clicking an already selected single stone deselects it
-                                selectedNotes.clear();
-                                activeMenuIndex = null;
-                                document.body.classList.remove('has-window-selection');
-                                renderTitle();
-                                renderGrid();
-                                return;
-                            }
 
                             selectedNotes.clear();
                             selectedNotes.add(i);
                             activeMenuIndex = i;
+                            if (startEditing) editingIndex = i;
                             document.body.classList.remove('has-window-selection');
                             renderTitle();
                             renderGrid();
@@ -5186,16 +4929,33 @@ function getUnderlineHtml(noteOrStatuses) {
 
                         const underlineDock = document.createElement('div');
                         underlineDock.className = 'cell-underline-dock';
-                        underlineDock.innerHTML = isEditing ? '' : getUnderlineHtml(note);
-                        underlineDock.style.pointerEvents = isEditing ? 'none' : 'auto';
+                        underlineDock.innerHTML = getUnderlineHtml(note);
             if (!isEditing) {
-                underlineDock.addEventListener('click', (e) => {
+                underlineDock.draggable = true;
+                underlineDock.addEventListener('dragstart', (e) => {
                     e.stopPropagation();
-                    closeContextMenu();
-                    const direction = e.clientX < e.currentTarget.getBoundingClientRect().left + e.currentTarget.offsetWidth / 2 ? -1 : 1;
-                    cycleNoteStatus(i, direction);
+                    draggedStatusIndex = i;
+                    e.dataTransfer.effectAllowed = 'copyMove';
+                    e.dataTransfer.setData('text/plain', '');
                 });
+                underlineDock.addEventListener('dragover', (e) => {
+                    if (draggedStatusIndex === null) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = (e.ctrlKey || e.metaKey) ? 'copy' : 'move';
+                });
+                underlineDock.addEventListener('drop', (e) => {
+                    if (draggedStatusIndex === null) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const from = draggedStatusIndex;
+                    draggedStatusIndex = null;
+                    if (e.ctrlKey || e.metaKey) copyNoteStatus(from, i);
+                    else swapNoteStatuses(from, i);
+                });
+                underlineDock.addEventListener('dragend', () => { draggedStatusIndex = null; });
             }
+            underlineDock.addEventListener('click', (e) => toggleDockMenu(e, 'status', i));
 
                         if (isEditing) {
                             dragWrapper.draggable = false;
@@ -5203,8 +4963,10 @@ function getUnderlineHtml(noteOrStatuses) {
                             inputContainer.contentEditable = true; inputContainer.id = 'note-edit-input';
                             inputContainer.className = `outline-none w-full break-words whitespace-pre-wrap text-center cursor-text relative z-30 ${strikeClass}`;
                             inputContainer.setAttribute('dir', 'auto'); inputContainer.innerText = note.text;
+                            inputContainer.addEventListener('input', () => { note.text = inputContainer.innerText; });
 
                             setTimeout(() => {
+                                if (!inputContainer.isConnected || editingIndex !== i) return;
                                 inputContainer.focus(); const range = document.createRange(); const sel = window.getSelection();
                                 range.selectNodeContents(inputContainer); range.collapse(false); sel.removeAllRanges(); sel.addRange(range);
                             }, 10);
@@ -5213,7 +4975,13 @@ function getUnderlineHtml(noteOrStatuses) {
                             let lastKey = null;
                             inputContainer.addEventListener('keydown', (e) => {
                                 if (e.key === 'Enter') {
-                                    if (lastKey === 'Enter') { e.preventDefault(); cell.querySelector('.btn-save')?.click(); }
+                                    if (lastKey === 'Enter') {
+                                        e.preventDefault();
+                                        commitCurrentEdit();
+                                        selectedNotes.clear();
+                                        activeMenuIndex = null;
+                                        renderGrid();
+                                    }
                                     lastKey = 'Enter';
                                 } else lastKey = e.key;
                             });
@@ -5223,15 +4991,10 @@ function getUnderlineHtml(noteOrStatuses) {
                             cell.appendChild(dragWrapper);
                             cell.appendChild(underlineDock);
 
-                            // Top-Right: Save
-                            dragWrapper.appendChild(createMenuButton('-top-2 -right-2 w-7 h-7 btn-save', iconCheck, () => {
-                                closeContextMenu(); const newText = inputContainer.innerText.trim();
-                                if (newText === '') {
-                                    notes[i] = null;
-                                    selectedNotes.clear();
-                                } else note.text = newText;
-                                editingIndex = null; activeMenuIndex = null; saveData(); renderGrid();
-                            }, 'Save note'));
+                            // Top-Right: Day of week
+                            dragWrapper.appendChild(createMenuButton('-top-2 -right-2 w-7 h-7', iconWeekday, (e) => {
+                                toggleWeekdayContextMenu(e.pageX, e.pageY, i, e.currentTarget);
+                            }, 'Set day of week'));
                             // Bottom-Left: Color
                             dragWrapper.appendChild(createMenuButton('-bottom-2 -left-2 w-7 h-7', iconPalette, (e) => {
                                 activeMenuIndex = i;
@@ -5240,16 +5003,20 @@ function getUnderlineHtml(noteOrStatuses) {
                                 toggleColorContextMenu(e.pageX, e.pageY, i, e.currentTarget);
                             }, 'Change color'));
 
-                            // Top-Left: Delete
-                            dragWrapper.appendChild(createMenuButton('-top-2 -left-2 w-7 h-7', iconTrashBin, () => deleteNote(i, inputContainer.innerText), 'Delete note'));
-
-                            // Bottom-Right: Font Size
-                            dragWrapper.appendChild(createMenuButton('-bottom-2 -right-2 w-7 h-7', iconFont, (e) => {
+                            // Top-Left: Font Size
+                            dragWrapper.appendChild(createMenuButton('-top-2 -left-2 w-7 h-7', iconFont, (e) => {
                                 activeMenuIndex = i;
                                 cell.classList.add('has-menu');
                                 note.text = inputContainer.innerText;
                                 toggleFontContextMenu(e.pageX, e.pageY, i, e.currentTarget);
                             }, 'Change font size'));
+
+                            // Bottom-Right: Status
+                            dragWrapper.appendChild(createMenuButton('-bottom-2 -right-2 w-7 h-7', iconStatus, (e) => {
+                                activeMenuIndex = i;
+                                cell.classList.add('has-menu');
+                                toggleStatusContextMenu(e.pageX, e.pageY, i, e.currentTarget);
+                            }, 'Set status'));
                         } else {
                             circle.innerText = note.text;
                             attachStoneDragHandlers(dragWrapper, circle, i, r, c);
@@ -5257,32 +5024,16 @@ function getUnderlineHtml(noteOrStatuses) {
                             cell.appendChild(dragWrapper);
                             cell.appendChild(underlineDock);
 
-                            const timerDock = document.createElement('div');
-                            timerDock.className = 'cell-timer-dock';
-                            timerDock.dataset.noteIndex = String(i);
-                            updateSnoozeDock(timerDock, i);
-                            timerDock.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                activeMenuIndex = i;
-                                document.querySelectorAll('.grid-cell.has-menu').forEach(c => c.classList.remove('has-menu'));
-                                cell.classList.add('has-menu');
-                                toggleSnoozeContextMenu(e.pageX, e.pageY, i, e.currentTarget);
-                            });
-                            cell.appendChild(timerDock);
-
-                            if (!isCapturingScreenshot && !titleState.isEditing) {
+                            if (!titleState.isEditing) {
                                 // Never render individual cell action buttons if a group selection is active
                                 if (selectedNotes.size <= 1) {
                                     const isExplicitActive = (activeMenuIndex === i && selectedNotes.size === 1 && selectedNotes.has(i));
                                     const btnExtraClass = isExplicitActive ? 'stone-menu-btn-visible' : '';
 
-                                    // Top-Right: Edit
-                                    dragWrapper.appendChild(createMenuButton(`-top-2 -right-2 w-7 h-7 stone-action-btn ${btnExtraClass}`, iconEdit, () => {
-                                        closeContextMenu();
-                                        selectedNotes.clear();
-                                        editingIndex = i;
-                                        renderGrid();
-                                    }, 'Edit note'));
+                                    // Top-Right: Day of week
+                                    dragWrapper.appendChild(createMenuButton(`-top-2 -right-2 w-7 h-7 stone-action-btn ${btnExtraClass}`, iconWeekday, (e) => {
+                                        toggleWeekdayContextMenu(e.pageX, e.pageY, i, e.currentTarget);
+                                    }, 'Set day of week'));
 
                                     // Bottom-Left: Color
                                     dragWrapper.appendChild(createMenuButton(`-bottom-2 -left-2 w-7 h-7 stone-action-btn ${btnExtraClass}`, iconPalette, (e) => {
@@ -5292,24 +5043,34 @@ function getUnderlineHtml(noteOrStatuses) {
                                         toggleColorContextMenu(e.pageX, e.pageY, i, e.currentTarget);
                                     }, 'Change color'));
 
-                                    // Top-Left: Dim timer
-                                    dragWrapper.appendChild(createMenuButton(`-top-2 -left-2 w-7 h-7 stone-action-btn ${btnExtraClass}`, iconSnooze, (e) => {
-                                        activeMenuIndex = i;
-                                        document.querySelectorAll('.grid-cell.has-menu').forEach(c => c.classList.remove('has-menu'));
-                                        cell.classList.add('has-menu');
-                                        toggleSnoozeContextMenu(e.pageX, e.pageY, i, e.currentTarget);
-                                    }, 'Dim timer'));
-
-                                    // Bottom-Right: Font Size
-                                    dragWrapper.appendChild(createMenuButton(`-bottom-2 -right-2 w-7 h-7 stone-action-btn ${btnExtraClass}`, iconFont, (e) => {
+                                    // Top-Left: Font Size
+                                    dragWrapper.appendChild(createMenuButton(`-top-2 -left-2 w-7 h-7 stone-action-btn ${btnExtraClass}`, iconFont, (e) => {
                                         activeMenuIndex = i;
                                         document.querySelectorAll('.grid-cell.has-menu').forEach(c => c.classList.remove('has-menu'));
                                         cell.classList.add('has-menu');
                                         toggleFontContextMenu(e.pageX, e.pageY, i, e.currentTarget);
                                     }, 'Change font size'));
+
+                                    // Bottom-Right: Status
+                                    dragWrapper.appendChild(createMenuButton(`-bottom-2 -right-2 w-7 h-7 stone-action-btn ${btnExtraClass}`, iconStatus, (e) => {
+                                        activeMenuIndex = i;
+                                        document.querySelectorAll('.grid-cell.has-menu').forEach(c => c.classList.remove('has-menu'));
+                                        cell.classList.add('has-menu');
+                                        toggleStatusContextMenu(e.pageX, e.pageY, i, e.currentTarget);
+                                    }, 'Set status'));
                                 }
                             }
                         }
+                        const timerDock = document.createElement('button');
+                        timerDock.type = 'button';
+                        timerDock.className = 'cell-timer-dock';
+                        timerDock.appendChild(document.createElement('span'));
+                        timerDock.dataset.noteIndex = String(i);
+                        timerDock.title = 'Set day of week';
+                        timerDock.addEventListener('click', (e) => {
+                            toggleDockMenu(e, 'weekday', i);
+                        });
+                        cell.appendChild(timerDock);
                     }
 
                     cell.addEventListener('dragover', (e) => {
@@ -5551,6 +5312,7 @@ function getUnderlineHtml(noteOrStatuses) {
                     });
 
                     gridElement.appendChild(cell);
+                    if (note) updateWeekdayDisplay(i);
                 }
             }
 
@@ -5570,7 +5332,7 @@ function getUnderlineHtml(noteOrStatuses) {
         }
 
         document.getElementById('btn-save').addEventListener('click', (e) => {
-            e.stopPropagation(); closeContextMenu(); commitCurrentEdit();
+            e.stopPropagation(); closeContextMenu(); commitOutsideEditAndRender();
             const data = getSaveObject();
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
             const downloadAnchorNode = document.createElement('a');
@@ -5584,11 +5346,11 @@ function getUnderlineHtml(noteOrStatuses) {
         });
 
         document.getElementById('btn-load').addEventListener('click', (e) => {
-            e.stopPropagation(); closeContextMenu(); commitCurrentEdit(); fileInput.click();
+            e.stopPropagation(); closeContextMenu(); commitOutsideEditAndRender(); fileInput.click();
         });
 
         document.getElementById('btn-sync').addEventListener('click', async (e) => {
-            e.stopPropagation(); closeContextMenu(); commitCurrentEdit();
+            e.stopPropagation(); closeContextMenu(); commitOutsideEditAndRender();
             if (syncFileHandle) { stopFileSync(); return; }
             if (!window.showSaveFilePicker && !window.showOpenFilePicker) {
                 alert('File syncing needs a browser that can write files directly (for example Chrome or Edge).');
@@ -5618,7 +5380,7 @@ function getUnderlineHtml(noteOrStatuses) {
         const trashButton = document.getElementById('btn-trash');
         trashButton.addEventListener('click', (e) => {
             e.stopPropagation(); closeContextMenu();
-            if (editingIndex !== null) { commitCurrentEdit(); }
+            if (editingIndex !== null) { commitOutsideEditAndRender(); }
             const targets = selectedNotes.size ? Array.from(selectedNotes) : (activeMenuIndex !== null ? [activeMenuIndex] : []);
             confirmDeleteNotes(targets);
         });
@@ -5648,7 +5410,6 @@ function getUnderlineHtml(noteOrStatuses) {
                     editingIndex = null;
                     activeMenuIndex = null;
                     selectedNotes.clear();
-                    resetNoteFilter();
                     saveData(); resizeGrid(); renderTitle(); renderGrid();
                 } catch (err) { alert("Unsupported or invalid save file."); }
             };
@@ -5658,7 +5419,7 @@ function getUnderlineHtml(noteOrStatuses) {
         document.getElementById('btn-grid').addEventListener('click', (e) => {
             e.stopPropagation();
             const wasOpen = isHeaderMenuOpen('grid');
-            commitCurrentEdit();
+            commitOutsideEditAndRender();
             if (wasOpen) {
                 closeContextMenu();
             } else if (closeContextMenu()) {
@@ -5669,7 +5430,7 @@ function getUnderlineHtml(noteOrStatuses) {
         document.getElementById('btn-colors').addEventListener('click', (e) => {
             e.stopPropagation();
             const wasOpen = isHeaderMenuOpen('colors');
-            commitCurrentEdit();
+            commitOutsideEditAndRender();
             if (wasOpen) {
                 closeContextMenu();
             } else if (closeContextMenu()) {
@@ -5680,22 +5441,11 @@ function getUnderlineHtml(noteOrStatuses) {
         document.getElementById('btn-note-style').addEventListener('click', (e) => {
             e.stopPropagation();
             const wasOpen = isHeaderMenuOpen('style');
-            commitCurrentEdit();
+            commitOutsideEditAndRender();
             if (wasOpen) {
                 closeContextMenu();
             } else if (closeContextMenu()) {
                 showNoteStyleMenu(e.pageX, e.pageY, e.currentTarget);
-            }
-        });
-
-        document.getElementById('btn-filter').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const wasOpen = isHeaderMenuOpen('filter');
-            commitCurrentEdit();
-            if (wasOpen) {
-                closeContextMenu();
-            } else if (closeContextMenu()) {
-                showFilterMenu(e.pageX, e.pageY, e.currentTarget);
             }
         });
 
@@ -5710,10 +5460,10 @@ function getUnderlineHtml(noteOrStatuses) {
         const aboutModal = document.getElementById('about-modal');
         document.getElementById('about-app-icon').src = document.querySelector('link[rel="icon"]').href;
         document.getElementById('btn-info').addEventListener('click', (e) => {
-            e.stopPropagation(); closeContextMenu(); commitCurrentEdit(); aboutModal.classList.remove('hidden');
+            e.stopPropagation(); closeContextMenu(); commitOutsideEditAndRender(); aboutModal.classList.remove('hidden');
         });
         // Keyboard activation for header action buttons
-        ['btn-grid', 'btn-colors', 'btn-note-style', 'btn-filter'].forEach((id) => {
+        ['btn-grid', 'btn-colors', 'btn-note-style'].forEach((id) => {
             const control = document.getElementById(id);
             if (!control) return;
             control.addEventListener('keydown', (e) => {
@@ -5737,34 +5487,15 @@ function getUnderlineHtml(noteOrStatuses) {
             }
         });
 
-        document.getElementById('btn-camera').addEventListener('click', (e) => {
-            e.stopPropagation(); closeContextMenu(); commitCurrentEdit();
-            isCapturingScreenshot = true; renderGrid(); renderTitle();
-            const tacks = document.querySelectorAll('.thumbtack'); tacks.forEach(t => t.style.opacity = '0');
-            setTimeout(() => {
-                htmlToImage.toPng(workspace, { pixelRatio: window.devicePixelRatio || 2 }).then(function (dataUrl) {
-                    const link = document.createElement('a');
-                    const ts = getFileTimestamp();
-                    const cleanTitle = (titleState.text || "").trim().replace(/[^a-zA-Z0-9]/g, '');
-                    const isCustomTitle = cleanTitle !== '' && cleanTitle.toLowerCase() !== 'tinynotes';
-                    const baseName = isCustomTitle ? `${cleanTitle}Snapshot` : 'Snapshot';
-                    link.download = `${ts.date}${baseName}${ts.time}.png`;
-                    link.href = dataUrl; link.click();
-                    isCapturingScreenshot = false; tacks.forEach(t => t.style.opacity = '1'); renderGrid(); renderTitle();
-                }).catch(function (error) {
-                    isCapturingScreenshot = false; tacks.forEach(t => t.style.opacity = '1'); renderGrid(); renderTitle();
-                });
-            }, 100);
-        });
-
         document.addEventListener('click', (e) => {
             if (!e.isTrusted) return;
             if (e.target.closest('#context-menu') || contextMenu.contains(e.target)) return;
             if (editMouseDownInside) return;
             if (!closeContextMenu()) return;
-            let needsRender = commitCurrentEdit();
-            if (activeMenuIndex !== null) { activeMenuIndex = null; needsRender = true; }
-            if (selectedNotes.size > 0) { selectedNotes.clear(); needsRender = true; }
+            const wasEditingNote = editingIndex !== null;
+            let needsRender = commitOutsideEdit();
+            if (!wasEditingNote && activeMenuIndex !== null) { activeMenuIndex = null; needsRender = true; }
+            if (!wasEditingNote && selectedNotes.size > 0) { selectedNotes.clear(); needsRender = true; }
             if (titleState.isMenuOpen) { titleState.isMenuOpen = false; needsRender = true; }
             if (needsRender) { renderTitle(); renderGrid(); }
         });
@@ -5782,13 +5513,28 @@ function getUnderlineHtml(noteOrStatuses) {
         renderTitle();
         resizeGrid();
         renderGrid();
-        processExpiredSnoozes();
-        scheduleSnoozeExpiry();
-        setInterval(refreshSnoozeDocks, 60000);
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) processExpiredSnoozes();
-        });
-
+        let lastWeekdayDate = new Date().toDateString();
+        let weekdayRefreshTimer;
+        function refreshWeekdays() {
+            const now = new Date();
+            if (now.toDateString() !== lastWeekdayDate) {
+                lastWeekdayDate = now.toDateString();
+                notes.forEach((note, index) => {
+                    if (note) updateWeekdayDisplay(index);
+                });
+                if (contextMenu.dataset.menuType === 'weekday' && activeMenuPosState) {
+                    const { x, y, anchorElement } = activeMenuPosState;
+                    showWeekdayContextMenu(x, y, Number(contextMenu.dataset.noteIndex), anchorElement);
+                }
+            }
+            clearTimeout(weekdayRefreshTimer);
+            const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            weekdayRefreshTimer = setTimeout(refreshWeekdays, midnight - now + 50);
+        }
+        document.addEventListener('visibilitychange', refreshWeekdays);
+        window.addEventListener('focus', refreshWeekdays);
+        setInterval(refreshWeekdays, 60000);
+        refreshWeekdays();
         // Prevent flicker by showing the workspace only after the first render
         setTimeout(() => {
             workspace.style.opacity = '1';
