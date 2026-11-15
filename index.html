@@ -290,7 +290,7 @@
             position: absolute;
             top: 0;
             left: 50%;
-            width: 6ch;
+            width: 7ch;
             max-width: calc(100% - 8px);
             height: 18px;
             display: flex;
@@ -3650,24 +3650,30 @@ function getUnderlineHtml(noteOrStatuses) {
 
         const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-        function getNoteWeekday(note) {
+        function getNoteWeekdays(note) {
             if (note?.weekday === 'everyday') return 'everyday';
-            return Number.isInteger(note?.weekday) && note.weekday >= 0 && note.weekday < 7 ? note.weekday : null;
+            const days = Array.isArray(note?.weekday) ? note.weekday : [note?.weekday];
+            return [...new Set(days.filter(day => Number.isInteger(day) && day >= 0 && day < 7))];
         }
 
         function updateWeekdayDisplay(index) {
             const cell = document.getElementById(`grid-cell-${index}`);
             if (!cell || !notes[index]) return;
-            const day = getNoteWeekday(notes[index]);
+            const days = getNoteWeekdays(notes[index]);
             const now = new Date();
-            const distance = typeof day === 'number' ? (day - now.getDay() + 7) % 7 : 0;
+            const sortedDays = days === 'everyday' ? [] : days.slice().sort((a, b) =>
+                (a - now.getDay() + 7) % 7 - (b - now.getDay() + 7) % 7);
+            const day = sortedDays[0];
+            const distance = day === undefined ? 0 : (day - now.getDay() + 7) % 7;
             const visibleDistance = now.getHours() >= TOMORROW_UNDIM_HOUR ? 1 : 0;
             cell.classList.toggle('weekday-dimmed', editingIndex !== index && distance > visibleDistance);
             const dock = cell.querySelector('.cell-timer-dock');
             if (dock) {
-                dock.classList.toggle('has-weekday', typeof day === 'number');
-                dock.querySelector('span').textContent = typeof day === 'number' ? weekdayNames[day].slice(0, 3).toUpperCase() : '';
-                dock.setAttribute('aria-label', day === null ? 'Set day of week' : `Day of week: ${day === 'everyday' ? 'Everyday' : weekdayNames[day]}`);
+                dock.classList.toggle('has-weekday', day !== undefined);
+                dock.querySelector('span').textContent = day === undefined ? '' :
+                    weekdayNames[day].slice(0, 3).toUpperCase() + (sortedDays.length > 1 ? `+${sortedDays.length - 1}` : '');
+                const label = days === 'everyday' ? 'Everyday' : sortedDays.map(selectedDay => weekdayNames[selectedDay]).join(', ');
+                dock.setAttribute('aria-label', label ? `Days of week: ${label}` : 'Set day of week');
             }
         }
 
@@ -3687,14 +3693,15 @@ function getUnderlineHtml(noteOrStatuses) {
             contextMenu.classList.remove('menu-thumbtack', 'menu-opacity-90');
             contextMenu.classList.add('menu-cell');
             const targets = getSelectionTargets(noteIndex);
-            const current = targets.length && targets.every(index => getNoteWeekday(notes[index]) === getNoteWeekday(notes[targets[0]]))
-                ? getNoteWeekday(notes[targets[0]]) : undefined;
             const today = new Date().getDay();
             const options = ['everyday', ...Array.from({ length: 7 }, (_, offset) => (today + offset) % 7)];
             const item = (day, label) => {
-                const selected = current === day;
-                const value = day === 'everyday' ? "'everyday'" : day === null ? 'null' : day;
-                return `<button type="button" class="menu-option-item ${selected ? 'bg-blue-50/70 text-blue-700 font-bold' : 'text-gray-800'}" role="menuitemradio" aria-checked="${selected}" onclick="applyWeekdayToSelection(${noteIndex}, ${value})">
+                const selected = targets.length > 0 && targets.every(index => {
+                    const days = getNoteWeekdays(notes[index]);
+                    return day === 'everyday' ? days === 'everyday' : days !== 'everyday' && days.includes(day);
+                });
+                const value = day === 'everyday' ? "'everyday'" : day;
+                return `<button type="button" class="menu-option-item ${selected ? 'bg-blue-50/70 text-blue-700 font-bold' : 'text-gray-800'}" role="menuitemcheckbox" aria-checked="${selected}" data-day="${day}" onclick="applyWeekdayToSelection(${noteIndex}, ${value})">
                     <span class="font-medium">${label}</span>
                     ${selected ? iconCheck : ''}
                 </button>`;
@@ -3705,21 +3712,32 @@ function getUnderlineHtml(noteOrStatuses) {
 
         window.applyWeekdayToSelection = function (noteIndex, day) {
             const targets = getSelectionTargets(noteIndex);
-            const clear = day === null || targets.every(index => getNoteWeekday(notes[index]) === day);
+            const clear = day === null || targets.every(index => {
+                const days = getNoteWeekdays(notes[index]);
+                return day === 'everyday' ? days === 'everyday' : days !== 'everyday' && days.includes(day);
+            });
             targets.forEach(index => {
-                if (clear) delete notes[index].weekday;
-                else notes[index].weekday = day;
+                const current = getNoteWeekdays(notes[index]);
+                if (day === null || (day === 'everyday' && clear)) {
+                    delete notes[index].weekday;
+                } else if (day === 'everyday') {
+                    notes[index].weekday = day;
+                } else {
+                    const days = current === 'everyday' ? [] : current;
+                    const updated = clear ? days.filter(selectedDay => selectedDay !== day) :
+                        [...new Set([...days, day])];
+                    if (updated.length) notes[index].weekday = updated;
+                    else delete notes[index].weekday;
+                }
                 delete notes[index].number;
+                updateWeekdayDisplay(index);
             });
             saveData();
-            closeContextMenu();
-            if (editingIndex !== noteIndex) {
-                selectedNotes.clear();
-                activeMenuIndex = null;
+            if (contextMenu.dataset.menuType === 'weekday' && activeMenuPosState) {
+                const { x, y, anchorElement } = activeMenuPosState;
+                showWeekdayContextMenu(x, y, noteIndex, anchorElement);
+                contextMenu.querySelector(`[data-day="${day}"]`)?.focus();
             }
-            document.body.classList.remove('has-window-selection');
-            renderTitle();
-            renderGrid();
         };
 
         let draggedStatusIndex = null;
