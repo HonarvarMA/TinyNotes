@@ -607,7 +607,7 @@
         body:not(.has-window-selection):not(.is-marquee-selecting):not(.is-dragging-stone) .grid-cell.is-selected .stone-action-btn,
         body:not(.has-window-selection):not(.is-marquee-selecting):not(.is-dragging-stone) .grid-cell.has-menu .stone-action-btn,
         body:not(.has-window-selection):not(.is-marquee-selecting):not(.is-dragging-stone) .stone-action-btn.stone-menu-btn-visible {
-            opacity: 1 !important;
+            opacity: 0.82 !important;
             pointer-events: auto !important;
             visibility: visible !important;
             transform: scale(1);
@@ -3953,8 +3953,8 @@ function getUnderlineHtml(noteOrStatuses) {
             const isTitle = noteIndex === 'title';
             let currentFontIdx = isTitle ? titleState.fontIndex : notes[noteIndex].fontIndex;
             const labelArray = ['Tiny', 'Fine', 'Small', 'Medium', 'Large', 'Huge', 'Giant'];
-            // Sort from larger to smaller (including Giant) for both cells and title
-            const indices = [6, 5, 4, 3, 2, 1, 0];
+            // Show sizes from smallest to largest for both cells and title
+            const indices = [0, 1, 2, 3, 4, 5, 6];
 
             let html = `<div class="menu-font-container select-none">`;
 
@@ -4966,18 +4966,27 @@ function getUnderlineHtml(noteOrStatuses) {
                             if (editMouseDownInside) return;
                             if (editingIndex === i) {
                                 e.stopPropagation();
-                                commitOutsideEditAndRender();
+                                commitCurrentEdit();
+                                selectedNotes.clear();
+                                activeMenuIndex = null;
+                                document.body.classList.remove('has-window-selection');
+                                renderTitle();
+                                renderGrid();
                                 return;
                             }
                             e.stopPropagation();
-                            const startEditing = selectedNotes.size === 1 && selectedNotes.has(i);
+                            const isOnlySelected = selectedNotes.size === 1 && selectedNotes.has(i);
                             closeContextMenu();
                             commitCurrentEdit();
 
-                            selectedNotes.clear();
-                            selectedNotes.add(i);
-                            activeMenuIndex = i;
-                            if (startEditing) editingIndex = i;
+                            if (isOnlySelected) {
+                                selectedNotes.clear();
+                                activeMenuIndex = null;
+                            } else {
+                                selectedNotes.clear();
+                                selectedNotes.add(i);
+                                activeMenuIndex = i;
+                            }
                             document.body.classList.remove('has-window-selection');
                             renderTitle();
                             renderGrid();
